@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EmergencyContact } from '../emergency-contacts/entities/emergency-contact.entity';
@@ -6,14 +6,25 @@ import { User } from '../users/entities/user.entity';
 import { CreateIncidentAlertDto } from './dto/create-incident-alert.dto';
 import { UpdateIncidentAlertDto } from './dto/update-incident-alert.dto';
 import { IncidentAlert } from './entities/incident-alert.entity';
+import {
+  EvolutionNotificationService,
+  EvolutionSendResult,
+} from './services/evolution-notification.service';
 
 type AlertCreateResult = {
   alerta: IncidentAlert;
   contactosNotificar: EmergencyContact[];
+  notificaciones: {
+    total: number;
+    enviadas: number;
+    fallidas: number;
+    detalle: EvolutionSendResult[];
+  } | null;
 };
 
 @Injectable()
 export class IncidentAlertsService {
+  private readonly logger = new Logger(IncidentAlertsService.name);
   constructor(
     @InjectRepository(IncidentAlert)
     private readonly alertsRepository: Repository<IncidentAlert>,
@@ -21,12 +32,13 @@ export class IncidentAlertsService {
     private readonly usersRepository: Repository<User>,
     @InjectRepository(EmergencyContact)
     private readonly contactsRepository: Repository<EmergencyContact>,
+    private readonly evolutionNotificationService: EvolutionNotificationService,
   ) {}
 
   async create(
     createAlertDto: CreateIncidentAlertDto,
   ): Promise<AlertCreateResult> {
-    await this.ensureUserExists(createAlertDto.id_usuario);
+    const user = await this.findUserOrFail(createAlertDto.id_usuario);
 
     const alert = this.alertsRepository.create({
       ...createAlertDto,
@@ -40,16 +52,37 @@ export class IncidentAlertsService {
     const savedAlert = await this.alertsRepository.save(alert);
 
     let contactosNotificar: EmergencyContact[] = [];
+    let notificaciones: AlertCreateResult['notificaciones'] = null;
+
     if (savedAlert.es_proactiva) {
       contactosNotificar = await this.contactsRepository.find({
         where: { id_usuario: savedAlert.id_usuario },
         order: { prioridad: 'ASC', id: 'ASC' },
       });
+
+      // Ejecutar envíos en background (no bloquear la petición)
+      this.evolutionNotificationService
+        .notifyEmergencyContacts(
+          savedAlert,
+          `${user.nombre} ${user.apellido}`.trim(),
+          contactosNotificar,
+        )
+        .then((detail) => {
+          const sent = detail.filter((item) => item.success).length;
+          this.logger.log(
+            `Notificaciones enviadas: ${sent}/${detail.length} para alerta ${savedAlert.id}`,
+          );
+          // Opcional: persistir `detail` en BD para auditoría.
+        })
+        .catch((err) => {
+          this.logger.error('Error enviando notificaciones por Evolution API', err as any);
+        });
     }
 
     return {
       alerta: savedAlert,
       contactosNotificar,
+      notificaciones,
     };
   }
 
@@ -99,11 +132,16 @@ export class IncidentAlertsService {
   }
 
   private async ensureUserExists(idUsuario: number): Promise<void> {
+    await this.findUserOrFail(idUsuario);
+  }
+
+  private async findUserOrFail(idUsuario: number): Promise<User> {
     const user = await this.usersRepository.findOne({
       where: { id: idUsuario },
     });
     if (!user) {
       throw new NotFoundException('Usuario no encontrado');
     }
+    return user;
   }
 }

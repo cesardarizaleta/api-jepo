@@ -24,6 +24,7 @@ export class IncidentAlertsController {
       data: {
         alerta: result.alerta,
         contactosNotificar: result.contactosNotificar,
+        notificaciones: result.notificaciones,
       },
     };
   }

@@ -5,6 +5,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { ApiKeyGuard } from './common/guards/api-key.guard';
 import { UsersModule } from './users/users.module';
 import { EmergencyContactsModule } from './emergency-contacts/emergency-contacts.module';
 import { IncidentAlertsModule } from './incident-alerts/incident-alerts.module';
@@ -45,6 +46,10 @@ import { IncidentAlertsModule } from './incident-alerts/incident-alerts.module';
   controllers: [AppController],
   providers: [
     AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ApiKeyGuard,
+    },
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
