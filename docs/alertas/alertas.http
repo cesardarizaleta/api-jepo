@@ -1,13 +1,13 @@
 @baseUrl = http://localhost:9002
-@userId = 1
 @apiKey = change_me_api_key
+@jwt = REEMPLAZAR_CON_TOKEN
 
 ### Health check basico (opcional)
 GET {{baseUrl}}/api
 x-api-key: {{apiKey}}
 
-### 1) Crear usuario
-POST {{baseUrl}}/api/usuarios
+### 1) Registrar usuario
+POST {{baseUrl}}/api/auth/register
 Content-Type: application/json
 x-api-key: {{apiKey}}
 
@@ -16,13 +16,25 @@ x-api-key: {{apiKey}}
   "apellido": "Lopez",
   "email": "cesar@example.com",
   "telefono": "+56999999999",
+  "password": "Passw0rd!Segura",
   "token_fcm": null
 }
 
-### 2) Crear contacto de emergencia prioridad 1
-POST {{baseUrl}}/api/usuarios/{{userId}}/contactos
+### 2) Login para obtener JWT
+POST {{baseUrl}}/api/auth/login
 Content-Type: application/json
 x-api-key: {{apiKey}}
+
+{
+  "email": "cesar@example.com",
+  "password": "Passw0rd!Segura"
+}
+
+### 3) Crear contacto de emergencia prioridad 1
+POST {{baseUrl}}/api/usuarios/contactos
+Content-Type: application/json
+x-api-key: {{apiKey}}
+Authorization: Bearer {{jwt}}
 
 {
   "nombre_contacto": "Maria Perez",
@@ -30,10 +42,11 @@ x-api-key: {{apiKey}}
   "prioridad": 1
 }
 
-### 3) Crear contacto de emergencia prioridad 2
-POST {{baseUrl}}/api/usuarios/{{userId}}/contactos
+### 4) Crear contacto de emergencia prioridad 2
+POST {{baseUrl}}/api/usuarios/contactos
 Content-Type: application/json
 x-api-key: {{apiKey}}
+Authorization: Bearer {{jwt}}
 
 {
   "nombre_contacto": "Juan Soto",
@@ -41,13 +54,13 @@ x-api-key: {{apiKey}}
   "prioridad": 2
 }
 
-### 4) Crear alerta proactiva (envia notificaciones por Evolution API)
+### 5) Crear alerta proactiva (envia notificaciones por Evolution API)
 POST {{baseUrl}}/api/alertas
 Content-Type: application/json
 x-api-key: {{apiKey}}
+Authorization: Bearer {{jwt}}
 
 {
-  "id_usuario": {{userId}},
   "latitud": -33.43719212,
   "longitud": -70.65058345,
   "url_audio_contexto": "https://storage.example.com/audio/12345.mp3",
@@ -55,23 +68,25 @@ x-api-key: {{apiKey}}
   "es_proactiva": true
 }
 
-### 5) Crear alerta no proactiva (no envia notificaciones)
+### 6) Crear alerta no proactiva (no envia notificaciones)
 POST {{baseUrl}}/api/alertas
 Content-Type: application/json
 x-api-key: {{apiKey}}
+Authorization: Bearer {{jwt}}
 
 {
-  "id_usuario": {{userId}},
   "latitud": -33.43719212,
   "longitud": -70.65058345,
   "url_audio_contexto": "https://storage.example.com/audio/12345.mp3",
   "es_proactiva": false
 }
 
-### 6) Listar alertas
+### 7) Listar alertas del usuario autenticado
 GET {{baseUrl}}/api/alertas
 x-api-key: {{apiKey}}
+Authorization: Bearer {{jwt}}
 
-### 7) Listar contactos de emergencia del usuario
-GET {{baseUrl}}/api/usuarios/{{userId}}/contactos
+### 8) Listar contactos de emergencia del usuario autenticado
+GET {{baseUrl}}/api/usuarios/contactos
 x-api-key: {{apiKey}}
+Authorization: Bearer {{jwt}}

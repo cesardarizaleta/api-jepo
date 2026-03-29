@@ -1,17 +1,12 @@
 import {
   IsBoolean,
   IsDateString,
-  IsInt,
   IsNumber,
   IsOptional,
   IsUrl,
 } from 'class-validator';
 
 export class UpdateIncidentAlertDto {
-  @IsOptional()
-  @IsInt()
-  id_usuario?: number;
-
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 8 })
   latitud?: number;

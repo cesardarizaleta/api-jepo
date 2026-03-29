@@ -7,6 +7,7 @@ Esta guia explica que necesitas para probar el flujo completo de alertas con not
 - API levantada en `http://localhost:9002`
 - Base de datos conectada
 - API key configurada y enviada en header
+- JWT de usuario obtenido desde `/api/auth/login`
 - Variables de Evolution API configuradas en `.env`:
 
 ```env
@@ -22,6 +23,14 @@ x-api-key: change_me_api_key
 
 Si falta o es incorrecta la API key, la API responde `401 Unauthorized`.
 
+Header obligatorio para endpoints protegidos:
+
+```http
+Authorization: Bearer <jwt>
+```
+
+Si falta o es inválido el JWT, la API responde `401 Unauthorized`.
+
 ```env
 EVOLUTION_API_BASE_URL=http://localhost:8080
 EVOLUTION_INSTANCE=mi_instancia
@@ -30,11 +39,12 @@ EVOLUTION_API_KEY=mi_api_key
 
 ## Flujo de prueba recomendado
 
-1. Crear usuario
-2. Crear contactos de emergencia del usuario
-3. Crear alerta proactiva (`es_proactiva: true`)
-4. Revisar respuesta con `contactosNotificar` y `notificaciones`
-5. Crear alerta no proactiva (`es_proactiva: false`) y validar que no intente notificar
+1. Registrar usuario (`POST /api/auth/register`) o iniciar sesión (`POST /api/auth/login`) con `x-api-key`.
+2. Guardar `access_token` del login.
+3. Crear contactos de emergencia del usuario autenticado.
+4. Crear alerta proactiva (`es_proactiva: true`).
+5. Revisar respuesta con `contactosNotificar`.
+6. Crear alerta no proactiva (`es_proactiva: false`) y validar que no intente notificar.
 
 ## Body de usuario
 
@@ -62,7 +72,6 @@ EVOLUTION_API_KEY=mi_api_key
 
 ```json
 {
-  "id_usuario": 1,
   "latitud": -33.43719212,
   "longitud": -70.65058345,
   "url_audio_contexto": "https://storage.example.com/audio/12345.mp3",
@@ -75,7 +84,6 @@ EVOLUTION_API_KEY=mi_api_key
 
 ```json
 {
-  "id_usuario": 1,
   "latitud": -33.43719212,
   "longitud": -70.65058345,
   "url_audio_contexto": "https://storage.example.com/audio/12345.mp3",
@@ -87,6 +95,8 @@ EVOLUTION_API_KEY=mi_api_key
 
 - `data.alerta`
 - `data.contactosNotificar`
+
+El `id_usuario` de la alerta se asigna automáticamente desde el JWT del usuario autenticado.
 
 Nota: el envío a contactos se procesa de forma asíncrona y no bloquea la petición HTTP. Por tanto la respuesta NO incluye el resumen de `notificaciones` (se procesa en background). Si necesitas auditoría, se puede persistir el resultado de envíos en una tabla separada.
 

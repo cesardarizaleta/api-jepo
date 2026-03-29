@@ -5,6 +5,7 @@
 ### Register (publico)
 POST {{baseUrl}}/api/auth/register
 Content-Type: application/json
+x-api-key: {{apiKey}}
 
 {
   "nombre": "Cesar",
@@ -18,6 +19,7 @@ Content-Type: application/json
 ### Login (publico)
 POST {{baseUrl}}/api/auth/login
 Content-Type: application/json
+x-api-key: {{apiKey}}
 
 {
   "email": "cesar@example.com",

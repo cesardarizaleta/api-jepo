@@ -1,21 +1,23 @@
 # Contactos de emergencia — API
 
-Documentación para gestionar la red de confianza de un usuario.
+Documentación para gestionar la red de confianza del usuario autenticado.
 
-Base path: `/api/usuarios/:idUsuario/contactos`
+Base path: `/api/usuarios/contactos`
 
-## Autenticacion por API Key (obligatoria)
+## Seguridad obligatoria
 
-Todas las peticiones requieren API key en header.
+Todas las peticiones requieren ambos headers:
 
 - Header por defecto: `x-api-key`
 - Valor: `API_KEY` definido en `.env`
 - Header configurable por env: `API_KEY_HEADER_NAME`
+- Header de usuario: `Authorization: Bearer <jwt>`
 
 Ejemplo:
 
 ```http
 x-api-key: change_me_api_key
+Authorization: Bearer <jwt>
 ```
 
 Archivos relevantes:
@@ -28,13 +30,14 @@ Archivos relevantes:
 ## Reglas importantes
 - Máximo 5 contactos por usuario (se retorna error si se excede).
 - `telefono_contacto` debe ser único por usuario.
+- El usuario dueño se toma desde el JWT; el cliente no envía `idUsuario`.
 
 ---
 
 ## Endpoints
 
 ### 1) Crear contacto
-- Método: `POST /api/usuarios/:idUsuario/contactos`
+- Método: `POST /api/usuarios/contactos`
 - Body (JSON):
 
 ```json
@@ -61,26 +64,27 @@ Archivos relevantes:
 ```
 
 ### 2) Listar contactos por usuario
-- Método: `GET /api/usuarios/:idUsuario/contactos`
+- Método: `GET /api/usuarios/contactos`
 - Respuesta: lista ordenada por `prioridad` ascendente.
 
 ### 3) Obtener contacto
-- Método: `GET /api/usuarios/:idUsuario/contactos/:id`
+- Método: `GET /api/usuarios/contactos/:id`
 
 ### 4) Actualizar contacto
-- Método: `PATCH /api/usuarios/:idUsuario/contactos/:id`
+- Método: `PATCH /api/usuarios/contactos/:id`
 - Body: campos opcionales de `UpdateEmergencyContactDto`.
 
 ### 5) Eliminar contacto
-- Método: `DELETE /api/usuarios/:idUsuario/contactos/:id`
+- Método: `DELETE /api/usuarios/contactos/:id`
 
 ---
 
 ## Notas para el frontend
-- Chequear antes de crear que el usuario exista.
+- El owner ya viene en el JWT, no enviar identificador de usuario por URL o body.
 - Manejar errores de `409 Conflict` si el teléfono ya existe.
 - Validar localmente la longitud/formato del teléfono.
 - Si falta o es incorrecta la API key, la API responde `401 Unauthorized`.
+- Si falta o es inválido el JWT, la API responde `401 Unauthorized`.
 
 ---
 

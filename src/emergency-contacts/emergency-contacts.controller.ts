@@ -7,12 +7,24 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Req,
+  UseGuards,
 } from '@nestjs/common';
+import { Request } from 'express';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CreateEmergencyContactDto } from './dto/create-emergency-contact.dto';
 import { UpdateEmergencyContactDto } from './dto/update-emergency-contact.dto';
 import { EmergencyContactsService } from './emergency-contacts.service';
 
-@Controller('usuarios/:idUsuario/contactos')
+type RequestWithUser = Request & {
+  user: {
+    sub: number;
+    email: string;
+  };
+};
+
+@UseGuards(JwtAuthGuard)
+@Controller('usuarios/contactos')
 export class EmergencyContactsController {
   constructor(
     private readonly emergencyContactsService: EmergencyContactsService,
@@ -20,30 +32,30 @@ export class EmergencyContactsController {
 
   @Post()
   async create(
-    @Param('idUsuario', ParseIntPipe) idUsuario: number,
+    @Req() request: RequestWithUser,
     @Body() createContactDto: CreateEmergencyContactDto,
   ) {
     const contact = await this.emergencyContactsService.create(
-      idUsuario,
+      request.user.sub,
       createContactDto,
     );
     return { message: 'Contacto de emergencia creado', data: contact };
   }
 
   @Get()
-  async findAll(@Param('idUsuario', ParseIntPipe) idUsuario: number) {
+  async findAll(@Req() request: RequestWithUser) {
     const contacts =
-      await this.emergencyContactsService.findAllByUser(idUsuario);
+      await this.emergencyContactsService.findAllByUser(request.user.sub);
     return { message: 'Contactos obtenidos', data: contacts };
   }
 
   @Get(':id')
   async findOne(
-    @Param('idUsuario', ParseIntPipe) idUsuario: number,
+    @Req() request: RequestWithUser,
     @Param('id', ParseIntPipe) id: number,
   ) {
     const contact = await this.emergencyContactsService.findOneByUser(
-      idUsuario,
+      request.user.sub,
       id,
     );
     return { message: 'Contacto obtenido', data: contact };
@@ -51,12 +63,12 @@ export class EmergencyContactsController {
 
   @Patch(':id')
   async update(
-    @Param('idUsuario', ParseIntPipe) idUsuario: number,
+    @Req() request: RequestWithUser,
     @Param('id', ParseIntPipe) id: number,
     @Body() updateContactDto: UpdateEmergencyContactDto,
   ) {
     const contact = await this.emergencyContactsService.update(
-      idUsuario,
+      request.user.sub,
       id,
       updateContactDto,
     );
@@ -65,10 +77,10 @@ export class EmergencyContactsController {
 
   @Delete(':id')
   async remove(
-    @Param('idUsuario', ParseIntPipe) idUsuario: number,
+    @Req() request: RequestWithUser,
     @Param('id', ParseIntPipe) id: number,
   ) {
-    await this.emergencyContactsService.remove(idUsuario, id);
+    await this.emergencyContactsService.remove(request.user.sub, id);
     return { message: 'Contacto eliminado', data: null };
   }
 }

@@ -36,12 +36,14 @@ export class IncidentAlertsService {
   ) {}
 
   async create(
+    idUsuarioAutenticado: number,
     createAlertDto: CreateIncidentAlertDto,
   ): Promise<AlertCreateResult> {
-    const user = await this.findUserOrFail(createAlertDto.id_usuario);
+    const user = await this.findUserOrFail(idUsuarioAutenticado);
 
     const alert = this.alertsRepository.create({
       ...createAlertDto,
+      id_usuario: idUsuarioAutenticado,
       latitud: createAlertDto.latitud.toFixed(8),
       longitud: createAlertDto.longitud.toFixed(8),
       fecha_hora: createAlertDto.fecha_hora
@@ -86,12 +88,20 @@ export class IncidentAlertsService {
     };
   }
 
-  findAll(): Promise<IncidentAlert[]> {
-    return this.alertsRepository.find({ order: { fecha_hora: 'DESC' } });
+  findAllByUser(idUsuarioAutenticado: number): Promise<IncidentAlert[]> {
+    return this.alertsRepository.find({
+      where: { id_usuario: idUsuarioAutenticado },
+      order: { fecha_hora: 'DESC' },
+    });
   }
 
-  async findOne(id: number): Promise<IncidentAlert> {
-    const alert = await this.alertsRepository.findOne({ where: { id } });
+  async findOneByUser(
+    idUsuarioAutenticado: number,
+    id: number,
+  ): Promise<IncidentAlert> {
+    const alert = await this.alertsRepository.findOne({
+      where: { id, id_usuario: idUsuarioAutenticado },
+    });
     if (!alert) {
       throw new NotFoundException('Alerta no encontrada');
     }
@@ -99,14 +109,11 @@ export class IncidentAlertsService {
   }
 
   async update(
+    idUsuarioAutenticado: number,
     id: number,
     updateAlertDto: UpdateIncidentAlertDto,
   ): Promise<IncidentAlert> {
-    const alert = await this.findOne(id);
-
-    if (updateAlertDto.id_usuario) {
-      await this.ensureUserExists(updateAlertDto.id_usuario);
-    }
+    const alert = await this.findOneByUser(idUsuarioAutenticado, id);
 
     const merged = this.alertsRepository.merge(alert, {
       ...updateAlertDto,
@@ -126,13 +133,9 @@ export class IncidentAlertsService {
     return this.alertsRepository.save(merged);
   }
 
-  async remove(id: number): Promise<void> {
-    await this.findOne(id);
-    await this.alertsRepository.softDelete(id);
-  }
-
-  private async ensureUserExists(idUsuario: number): Promise<void> {
-    await this.findUserOrFail(idUsuario);
+  async remove(idUsuarioAutenticado: number, id: number): Promise<void> {
+    await this.findOneByUser(idUsuarioAutenticado, id);
+    await this.alertsRepository.softDelete({ id, id_usuario: idUsuarioAutenticado });
   }
 
   private async findUserOrFail(idUsuario: number): Promise<User> {

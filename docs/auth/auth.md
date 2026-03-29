@@ -4,10 +4,19 @@ Documentación de endpoints para registro e inicio de sesión.
 
 Base path: `/api/auth`
 
-## Endpoints públicos (sin API key)
+## Flujo de seguridad
+
+- Capa 1 (aplicacion): `x-api-key` obligatoria en todos los endpoints.
+- Capa 2 (usuario): JWT obligatorio para endpoints protegidos.
+
+## Endpoints de autenticacion (sin JWT)
+
+Aunque son públicos respecto al JWT, requieren API key.
 
 ### 1) Registro
 - Método: `POST /api/auth/register`
+- Headers:
+  - `x-api-key: <API_KEY>`
 - Descripción: Crea un usuario y retorna JWT de acceso.
 - Body (JSON):
 
@@ -46,6 +55,8 @@ Base path: `/api/auth`
 
 ### 2) Login
 - Método: `POST /api/auth/login`
+- Headers:
+  - `x-api-key: <API_KEY>`
 - Descripción: Valida credenciales y retorna JWT de acceso.
 - Body (JSON):
 
