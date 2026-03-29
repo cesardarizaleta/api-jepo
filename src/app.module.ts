@@ -9,6 +9,8 @@ import { ApiKeyGuard } from './common/guards/api-key.guard';
 import { UsersModule } from './users/users.module';
 import { EmergencyContactsModule } from './emergency-contacts/emergency-contacts.module';
 import { IncidentAlertsModule } from './incident-alerts/incident-alerts.module';
+import { SecurityModule } from './common/security/security.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -39,7 +41,9 @@ import { IncidentAlertsModule } from './incident-alerts/incident-alerts.module';
         synchronize: configService.get<string>('DB_SYNC', 'true') === 'true',
       }),
     }),
+    SecurityModule,
     UsersModule,
+    AuthModule,
     EmergencyContactsModule,
     IncidentAlertsModule,
   ],

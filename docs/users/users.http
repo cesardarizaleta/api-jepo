@@ -12,6 +12,7 @@ x-api-key: {{apiKey}}
   "apellido": "Lopez",
   "email": "cesar@example.com",
   "telefono": "+56999999999",
+  "password": "Passw0rd!Segura",
   "token_fcm": null
 }
 

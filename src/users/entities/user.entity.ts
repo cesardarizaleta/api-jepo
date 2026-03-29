@@ -27,6 +27,9 @@ export class User {
   @Column({ type: 'varchar', length: 30 })
   telefono: string;
 
+  @Column({ type: 'varchar', length: 255, select: false, nullable: true })
+  password_hash: string | null;
+
   @Column({ type: 'varchar', length: 255, nullable: true })
   token_fcm: string | null;
 

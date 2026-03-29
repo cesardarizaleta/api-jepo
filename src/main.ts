@@ -13,6 +13,7 @@ async function bootstrap() {
       'Documentacion de la API del Sistema de Asistencia Proactiva a Personas.',
     )
     .setVersion('1.0.0')
+    .addBearerAuth()
     .build();
   const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api/docs', app, swaggerDocument, {

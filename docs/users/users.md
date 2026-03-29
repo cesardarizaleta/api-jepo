@@ -38,6 +38,7 @@ Archivos relevantes:
   "apellido": "Lopez",
   "email": "cesar@example.com",
   "telefono": "+56999999999",
+  "password": "Passw0rd!Segura",
   "token_fcm": null
 }
 ```
@@ -46,6 +47,7 @@ Archivos relevantes:
   - `nombre`, `apellido`: strings 2–80 caracteres
   - `email`: email válido
   - `telefono`: string 7–30 caracteres
+  - `password`: string 8–72 caracteres, con mayúscula, minúscula, número y carácter especial
   - `token_fcm`: opcional
 
 - Respuesta (ejemplo):
@@ -78,6 +80,7 @@ Archivos relevantes:
 ### 4) Actualizar usuario
 - Método: `PATCH /api/usuarios/:id`
 - Body: campos opcionales del DTO `UpdateUserDto` (ver DTOs)
+- Nota: si envías `password`, se vuelve a hashear antes de persistir.
 
 ### 5) Actualizar token FCM
 - Método: `PATCH /api/usuarios/:id/token-fcm`
