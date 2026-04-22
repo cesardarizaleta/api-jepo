@@ -1,6 +1,15 @@
 import { IsEmail, IsOptional, IsString, Length, Matches } from 'class-validator';
+import { Transform } from 'class-transformer';
+import { IsCedula } from '../../common/validators/cedula.validator';
+import { normalizeCedula } from '../../common/utils/cedula.util';
 
 export class CreateUserDto {
+  @IsCedula({ message: 'Cédula inválida' })
+  @Transform(({ value }) => {
+    const n = normalizeCedula(value);
+    return n === null ? null : Number(n);
+  }, { toClassOnly: true })
+  cedula: number;
   @IsString()
   @Length(2, 80)
   nombre: string;

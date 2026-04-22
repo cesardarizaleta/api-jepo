@@ -15,6 +15,9 @@ export class User {
   @PrimaryGeneratedColumn()
   id: number;
 
+  @Column({ type: 'integer', unique: true, nullable: true })
+  cedula: number;
+
   @Column({ type: 'varchar', length: 80 })
   nombre: string;
 

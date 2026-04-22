@@ -15,11 +15,11 @@ export class IncidentAlert {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ name: 'id_usuario', type: 'int' })
+  @Column({ name: 'cedula_usuario', type: 'integer' })
   id_usuario: number;
 
   @ManyToOne(() => User, (user) => user.alertas, { nullable: false })
-  @JoinColumn({ name: 'id_usuario' })
+  @JoinColumn({ name: 'cedula_usuario', referencedColumnName: 'cedula' })
   usuario: User;
 
   @Column({ type: 'decimal', precision: 10, scale: 8 })

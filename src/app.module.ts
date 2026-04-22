@@ -38,7 +38,7 @@ import { AuthModule } from './auth/auth.module';
         database: configService.get<string>('DB_NAME', 'api_jepo'),
         schema: configService.get<string>('DB_SCHEMA', 'asistencia_proactiva'),
         autoLoadEntities: true,
-        synchronize: configService.get<string>('DB_SYNC', 'true') === 'true',
+        synchronize: configService.get<string>('DB_SYNC', 'false') === 'true',
       }),
     }),
     SecurityModule,
