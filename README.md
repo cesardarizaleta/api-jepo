@@ -65,11 +65,11 @@ THROTTLE_LIMIT=60
 
 ### Contactos de emergencia
 
-- `POST /api/usuarios/:idUsuario/contactos`
-- `GET /api/usuarios/:idUsuario/contactos`
-- `GET /api/usuarios/:idUsuario/contactos/:id`
-- `PATCH /api/usuarios/:idUsuario/contactos/:id`
-- `DELETE /api/usuarios/:idUsuario/contactos/:id`
+- `POST /api/usuarios/contactos`
+- `GET /api/usuarios/contactos`
+- `GET /api/usuarios/contactos/:id`
+- `PATCH /api/usuarios/contactos/:id`
+- `DELETE /api/usuarios/contactos/:id`
 
 ### Alertas
 
@@ -88,6 +88,12 @@ THROTTLE_LIMIT=60
   "data": {}
 }
 ```
+
+## Documentacion de integracion
+
+- Swagger UI: `/api/docs`
+- OpenAPI JSON: `/api/docs-json`
+- Guia completa (requests/responses + cURL): `docs/API_FULL.md`
 
 ## Pruebas
 
