@@ -42,10 +42,10 @@ import { AuthModule } from './auth/auth.module';
       }),
     }),
     SecurityModule,
-    UsersModule,
     AuthModule,
     EmergencyContactsModule,
     IncidentAlertsModule,
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [
