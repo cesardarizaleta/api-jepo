@@ -7,6 +7,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ApiKeyGuard } from './common/guards/api-key.guard';
 import { UsersModule } from './users/users.module';
+import { UsersApiModule } from './users/users-api.module';
 import { EmergencyContactsModule } from './emergency-contacts/emergency-contacts.module';
 import { IncidentAlertsModule } from './incident-alerts/incident-alerts.module';
 import { SecurityModule } from './common/security/security.module';
@@ -46,6 +47,7 @@ import { AuthModule } from './auth/auth.module';
     EmergencyContactsModule,
     IncidentAlertsModule,
     UsersModule,
+    UsersApiModule,
   ],
   controllers: [AppController],
   providers: [

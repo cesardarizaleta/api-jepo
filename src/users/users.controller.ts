@@ -44,7 +44,7 @@ export class UsersController {
     return { message: 'Usuarios obtenidos', data: users };
   }
 
-  @Get(':id(\\d+)')
+  @Get(':id')
   @ApiOperation({ summary: 'Obtener usuario por ID' })
   @ApiParam({ name: 'id', type: Number, example: 1 })
   @ApiOkResponse({ description: 'Usuario obtenido' })
@@ -53,7 +53,7 @@ export class UsersController {
     return { message: 'Usuario obtenido', data: user };
   }
 
-  @Patch(':id(\\d+)')
+  @Patch(':id')
   @ApiOperation({ summary: 'Actualizar usuario por ID' })
   @ApiParam({ name: 'id', type: Number, example: 1 })
   @ApiBody({ type: UpdateUserDto })
@@ -66,7 +66,7 @@ export class UsersController {
     return { message: 'Usuario actualizado', data: user };
   }
 
-  @Patch(':id(\\d+)/token-fcm')
+  @Patch(':id/token-fcm')
   @ApiOperation({ summary: 'Actualizar token FCM del usuario' })
   @ApiParam({ name: 'id', type: Number, example: 1 })
   @ApiBody({ type: UpdateTokenDto })
@@ -79,7 +79,7 @@ export class UsersController {
     return { message: 'Token FCM actualizado', data: user };
   }
 
-  @Delete(':id(\\d+)')
+  @Delete(':id')
   @ApiOperation({ summary: 'Eliminar usuario (soft delete)' })
   @ApiParam({ name: 'id', type: Number, example: 1 })
   @ApiOkResponse({ description: 'Usuario eliminado' })
