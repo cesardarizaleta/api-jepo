@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  api-jepo:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: api-jepo:latest
+    container_name: api_jepo_prod
+    restart: unless-stopped
+    # Aquí es donde leemos automáticamente el archivo .env de tu directorio:
+    env_file:
+      - .env
+    ports:
+      # Exponemos el puerto de la variable de entorno, si no existe usa 9002
+      - "${PORT:-9002}:${PORT:-9002}"
+    environment:
+      - NODE_ENV=production
