@@ -119,6 +119,9 @@ export class EvolutionNotificationService {
     error?: string;
   }> {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 seconds timeout
+
       const response = await fetch(
         `${this.baseUrl}/message/sendText/${this.instance}`,
         {
@@ -128,8 +131,10 @@ export class EvolutionNotificationService {
             apikey: this.apiKey,
           },
           body: JSON.stringify({ number, text }),
+          signal: controller.signal,
         },
       );
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const responseBody = await response.text();

@@ -20,3 +20,4 @@ EXPOSE 9002
 # Iniciar la aplicación
 CMD ["node", "dist/main.js"]
 
+  

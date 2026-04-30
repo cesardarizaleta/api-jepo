@@ -12,6 +12,7 @@ import { EmergencyContactsModule } from './emergency-contacts/emergency-contacts
 import { IncidentAlertsModule } from './incident-alerts/incident-alerts.module';
 import { SecurityModule } from './common/security/security.module';
 import { AuthModule } from './auth/auth.module';
+import { HealthModule } from './setup/health/health.module';
 
 @Module({
   imports: [
@@ -40,10 +41,19 @@ import { AuthModule } from './auth/auth.module';
         schema: configService.get<string>('DB_SCHEMA', 'asistencia_proactiva'),
         autoLoadEntities: true,
         synchronize: configService.get<string>('DB_SYNC', 'false') === 'true',
+        retryAttempts: 10,
+        retryDelay: 3000,
+        keepConnectionAlive: true,
+        extra: {
+          max: configService.get<number>('DB_MAX_CONNECTIONS', 20),
+          idleTimeoutMillis: 30000,
+          connectionTimeoutMillis: 5000,
+        },
       }),
     }),
     SecurityModule,
     AuthModule,
+    HealthModule,
     EmergencyContactsModule,
     IncidentAlertsModule,
     UsersModule,
@@ -62,4 +72,4 @@ import { AuthModule } from './auth/auth.module';
     },
   ],
 })
-export class AppModule {}
+export class AppModule { }

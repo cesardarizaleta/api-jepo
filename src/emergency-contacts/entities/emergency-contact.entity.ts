@@ -3,6 +3,7 @@ import {
   CreateDateColumn,
   DeleteDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -15,9 +16,11 @@ export class EmergencyContact {
   @PrimaryGeneratedColumn()
   id: number;
 
+  @Index()
   @Column({
     name: 'cedula_usuario',
     type: 'bigint',
+    nullable: true,
     transformer: {
       to: (value: number) => value,
       from: (value: string) => (value ? Number(value) : value),
@@ -25,7 +28,7 @@ export class EmergencyContact {
   })
   id_usuario: number;
 
-  @ManyToOne(() => User, (user) => user.contactos, { nullable: false })
+  @ManyToOne(() => User, (user) => user.contactos, { nullable: true })
   @JoinColumn({ name: 'cedula_usuario', referencedColumnName: 'cedula' })
   usuario: User;
 

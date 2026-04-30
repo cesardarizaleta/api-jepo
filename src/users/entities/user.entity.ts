@@ -18,7 +18,7 @@ export class User {
   @Column({
     type: 'bigint',
     unique: true,
-    nullable: false,
+    nullable: true,
     transformer: {
       to: (value: number) => value,
       from: (value: string) => (value ? Number(value) : value),
