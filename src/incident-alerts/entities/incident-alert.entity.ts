@@ -15,7 +15,14 @@ export class IncidentAlert {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ name: 'cedula_usuario', type: 'integer' })
+  @Column({
+    name: 'cedula_usuario',
+    type: 'bigint',
+    transformer: {
+      to: (value: number) => value,
+      from: (value: string) => (value ? Number(value) : value),
+    },
+  })
   id_usuario: number;
 
   @ManyToOne(() => User, (user) => user.alertas, { nullable: false })
