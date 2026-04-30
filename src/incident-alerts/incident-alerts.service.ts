@@ -43,7 +43,7 @@ export class IncidentAlertsService {
 
     const alert = this.alertsRepository.create({
       ...createAlertDto,
-      id_usuario: idUsuarioAutenticado,
+      id_usuario: user.cedula,
       latitud: createAlertDto.latitud.toFixed(8),
       longitud: createAlertDto.longitud.toFixed(8),
       fecha_hora: createAlertDto.fecha_hora
@@ -88,9 +88,10 @@ export class IncidentAlertsService {
     };
   }
 
-  findAllByUser(idUsuarioAutenticado: number): Promise<IncidentAlert[]> {
+  async findAllByUser(idUsuarioAutenticado: number): Promise<IncidentAlert[]> {
+    const user = await this.findUserOrFail(idUsuarioAutenticado);
     return this.alertsRepository.find({
-      where: { id_usuario: idUsuarioAutenticado },
+      where: { id_usuario: user.cedula },
       order: { fecha_hora: 'DESC' },
     });
   }
@@ -99,8 +100,9 @@ export class IncidentAlertsService {
     idUsuarioAutenticado: number,
     id: number,
   ): Promise<IncidentAlert> {
+    const user = await this.findUserOrFail(idUsuarioAutenticado);
     const alert = await this.alertsRepository.findOne({
-      where: { id, id_usuario: idUsuarioAutenticado },
+      where: { id, id_usuario: user.cedula },
     });
     if (!alert) {
       throw new NotFoundException('Alerta no encontrada');
@@ -134,8 +136,12 @@ export class IncidentAlertsService {
   }
 
   async remove(idUsuarioAutenticado: number, id: number): Promise<void> {
+    const user = await this.findUserOrFail(idUsuarioAutenticado);
     await this.findOneByUser(idUsuarioAutenticado, id);
-    await this.alertsRepository.softDelete({ id, id_usuario: idUsuarioAutenticado });
+    await this.alertsRepository.softDelete({
+      id,
+      id_usuario: user.cedula,
+    });
   }
 
   private async findUserOrFail(idUsuario: number): Promise<User> {
