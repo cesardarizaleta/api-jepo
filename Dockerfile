@@ -1,53 +1,22 @@
-# ==========================================
-# Etapa 1: Build (Construcción)
-# ==========================================
-FROM node:20-alpine AS builder
+FROM node:20-alpine
 
-# Crear directorio de trabajo
-WORKDIR /usr/src/app
+WORKDIR /app
 
-# Copiar archivos de dependencias
+# Instalar dependencias (se cachea si no cambia el package.json)
 COPY package*.json ./
+RUN npm install --quiet
 
-# Instalar dependencias exactas usando ci
-RUN npm ci
-
-# Copiar el código fuente
+# Copiar el código y compilar
 COPY . .
-
-# Compilar la aplicación NestJS
 RUN npm run build
 
-# Limpiar dependencias de desarrollo y dejar solo las de producción
-# Esto reduce drásticamente el tamaño final de la imagen
-RUN npm ci --only=production && npm cache clean --force
+# Eliminar dependencias de desarrollo (mucho más rápido que reinstalar)
+RUN npm prune --production
 
-# ==========================================
-# Etapa 2: Production (Ejecución)
-# ==========================================
-FROM node:20-alpine AS production
-
-# Variables de entorno por defecto
+# Variables de entorno y puerto
 ENV NODE_ENV=production
+EXPOSE 9002
 
-# Crear directorio de trabajo
-WORKDIR /usr/src/app
-
-# Cambiar el usuario por motivos de seguridad (evitar correr como root)
-RUN chown node:node /usr/src/app
-USER node
-
-# Copiar package.json (necesario para definir algunos comportamientos de node)
-COPY --chown=node:node package*.json ./
-
-# Copiar dependencias de producción desde la etapa de build
-COPY --chown=node:node --from=builder /usr/src/app/node_modules ./node_modules
-
-# Copiar los binarios compilados
-COPY --chown=node:node --from=builder /usr/src/app/dist ./dist
-
-# El puerto se obtiene del .env y se mapeará al momento de correr el contenedor
-EXPOSE ${PORT:-9002}
-
-# Comando por defecto para iniciar en producción
+# Iniciar la aplicación
 CMD ["node", "dist/main.js"]
+
