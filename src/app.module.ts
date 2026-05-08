@@ -29,17 +29,24 @@ import { AuthModule } from './auth/auth.module';
     }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
-        host: configService.get<string>('DB_HOST', 'localhost'),
-        port: Number(configService.get<number>('DB_PORT', 5432)),
-        username: configService.get<string>('DB_USER', 'postgres'),
-        password: configService.get<string>('DB_PASSWORD', 'postgres'),
-        database: configService.get<string>('DB_NAME', 'api_jepo'),
-        schema: configService.get<string>('DB_SCHEMA', 'asistencia_proactiva'),
-        autoLoadEntities: true,
-        synchronize: configService.get<string>('DB_SYNC', 'false') === 'true',
-      }),
+      useFactory: (configService: ConfigService) => {
+        const dbUrl = configService.get<string>('DB_URL', '');
+
+        if (!dbUrl) {
+          throw new Error('DB_URL is required');
+        }
+
+        const parsedUrl = new URL(dbUrl);
+
+        return {
+          type: 'postgres',
+          url: dbUrl,
+          schema:
+            parsedUrl.searchParams.get('schema') ?? 'asistencia_proactiva',
+          autoLoadEntities: true,
+          synchronize: parsedUrl.searchParams.get('sync') === 'true',
+        };
+      },
     }),
     SecurityModule,
     UsersModule,

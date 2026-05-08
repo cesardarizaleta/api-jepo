@@ -37,13 +37,7 @@ npm run start:dev
 
 ```env
 PORT=3000
-DB_HOST=localhost
-DB_PORT=5432
-DB_USER=postgres
-DB_PASSWORD=postgres
-DB_NAME=api_jepo
-DB_SCHEMA=asistencia_proactiva
-DB_SYNC=true
+DB_URL=postgres://postgres:postgres@localhost:5432/api_jepo?schema=asistencia_proactiva&sync=true
 THROTTLE_TTL=60000
 THROTTLE_LIMIT=60
 ```
