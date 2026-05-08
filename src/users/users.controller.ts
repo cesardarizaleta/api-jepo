@@ -9,11 +9,20 @@ import {
   Post,
 } from '@nestjs/common';
 import {
+<<<<<<< HEAD
   ApiBearerAuth,
   ApiCreatedResponse,
   ApiOkResponse,
   ApiOperation,
   ApiParam,
+=======
+  ApiBody,
+    ApiBody,
+    ApiCreatedResponse,
+    ApiOkResponse,
+    ApiOperation,
+    ApiParam,
+    ApiSecurity,
   ApiTags,
 } from '@nestjs/swagger';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -22,7 +31,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { UsersService } from './users.service';
 
 @ApiTags('Usuarios')
-@ApiBearerAuth()
+@ApiSecurity('x-api-key')
 @Controller('usuarios')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
@@ -47,6 +56,8 @@ export class UsersController {
     },
   })
   @Post()
+  @ApiBody({ type: CreateUserDto })
+  @ApiOkResponse({ description: 'Usuario creado' })
   async create(@Body() createUserDto: CreateUserDto) {
     const user = await this.usersService.create(createUserDto);
     return { message: 'Usuario creado', data: user };
@@ -99,6 +110,9 @@ export class UsersController {
     },
   })
   @Get(':id')
+  @ApiOperation({ summary: 'Obtener usuario por ID' })
+  @ApiParam({ name: 'id', type: Number, example: 1 })
+  @ApiOkResponse({ description: 'Usuario obtenido' })
   async findOne(@Param('id', ParseIntPipe) id: number) {
     const user = await this.usersService.findOne(id);
     return { message: 'Usuario obtenido', data: user };
@@ -124,6 +138,10 @@ export class UsersController {
     },
   })
   @Patch(':id')
+  @ApiOperation({ summary: 'Actualizar usuario por ID' })
+  @ApiParam({ name: 'id', type: Number, example: 1 })
+  @ApiBody({ type: UpdateUserDto })
+  @ApiOkResponse({ description: 'Usuario actualizado' })
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateUserDto: UpdateUserDto,
@@ -148,6 +166,10 @@ export class UsersController {
     },
   })
   @Patch(':id/token-fcm')
+  @ApiOperation({ summary: 'Actualizar token FCM del usuario' })
+  @ApiParam({ name: 'id', type: Number, example: 1 })
+  @ApiBody({ type: UpdateTokenDto })
+  @ApiOkResponse({ description: 'Token FCM actualizado' })
   async updateToken(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateTokenDto: UpdateTokenDto,
@@ -169,6 +191,9 @@ export class UsersController {
     },
   })
   @Delete(':id')
+  @ApiOperation({ summary: 'Eliminar usuario (soft delete)' })
+  @ApiParam({ name: 'id', type: Number, example: 1 })
+  @ApiOkResponse({ description: 'Usuario eliminado' })
   async remove(@Param('id', ParseIntPipe) id: number) {
     await this.usersService.remove(id);
     return { message: 'Usuario eliminado', data: null };

@@ -23,9 +23,11 @@ export class UsersService {
 
   async create(createUserDto: CreateUserDto): Promise<SafeUser> {
     await this.validateUniqueEmail(createUserDto.email);
+    await this.validateUniqueCedula(createUserDto.cedula);
 
     const passwordHash = await this.passwordService.hash(createUserDto.password);
     const user = this.usersRepository.create({
+      cedula: createUserDto.cedula,
       nombre: createUserDto.nombre,
       apellido: createUserDto.apellido,
       email: createUserDto.email,
@@ -36,6 +38,13 @@ export class UsersService {
 
     const saved = await this.usersRepository.save(user);
     return this.findOne(saved.id);
+  }
+
+  private async validateUniqueCedula(cedula: number): Promise<void> {
+    const existing = await this.usersRepository.findOne({ where: { cedula } });
+    if (existing) {
+      throw new ConflictException('Ya existe un usuario con esa cédula');
+    }
   }
 
   async findAll(): Promise<SafeUser[]> {

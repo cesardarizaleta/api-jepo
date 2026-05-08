@@ -15,7 +15,15 @@ export class User {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ type: 'integer', unique: true, nullable: true })
+  @Column({
+    type: 'bigint',
+    unique: true,
+    nullable: true,
+    transformer: {
+      to: (value: number) => value,
+      from: (value: string) => (value ? Number(value) : value),
+    },
+  })
   cedula: number;
 
   @Column({ type: 'varchar', length: 80 })

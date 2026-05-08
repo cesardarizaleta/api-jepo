@@ -10,15 +10,17 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { Request } from 'express';
 import {
   ApiBearerAuth,
+  ApiBody,
   ApiCreatedResponse,
   ApiOkResponse,
   ApiOperation,
   ApiParam,
+  ApiSecurity,
   ApiTags,
 } from '@nestjs/swagger';
+import { Request } from 'express';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CreateEmergencyContactDto } from './dto/create-emergency-contact.dto';
 import { UpdateEmergencyContactDto } from './dto/update-emergency-contact.dto';
@@ -32,7 +34,8 @@ type RequestWithUser = Request & {
 };
 
 @ApiTags('Contactos de Emergencia')
-@ApiBearerAuth()
+@ApiSecurity('x-api-key')
+@ApiBearerAuth('bearer')
 @UseGuards(JwtAuthGuard)
 @Controller('usuarios/contactos')
 export class EmergencyContactsController {
@@ -58,6 +61,8 @@ export class EmergencyContactsController {
     },
   })
   @Post()
+  @ApiBody({ type: CreateEmergencyContactDto })
+  @ApiOkResponse({ description: 'Contacto de emergencia creado' })
   async create(
     @Req() request: RequestWithUser,
     @Body() createContactDto: CreateEmergencyContactDto,
@@ -89,6 +94,7 @@ export class EmergencyContactsController {
     },
   })
   @Get()
+  @ApiOkResponse({ description: 'Contactos obtenidos' })
   async findAll(@Req() request: RequestWithUser) {
     const contacts =
       await this.emergencyContactsService.findAllByUser(request.user.sub);
@@ -114,6 +120,9 @@ export class EmergencyContactsController {
     },
   })
   @Get(':id')
+  @ApiOperation({ summary: 'Obtener contacto de emergencia por ID' })
+  @ApiParam({ name: 'id', type: Number, example: 1 })
+  @ApiOkResponse({ description: 'Contacto obtenido' })
   async findOne(
     @Req() request: RequestWithUser,
     @Param('id', ParseIntPipe) id: number,
@@ -144,6 +153,9 @@ export class EmergencyContactsController {
     },
   })
   @Patch(':id')
+  @ApiParam({ name: 'id', type: Number, example: 1 })
+  @ApiBody({ type: UpdateEmergencyContactDto })
+  @ApiOkResponse({ description: 'Contacto actualizado' })
   async update(
     @Req() request: RequestWithUser,
     @Param('id', ParseIntPipe) id: number,
@@ -170,6 +182,9 @@ export class EmergencyContactsController {
     },
   })
   @Delete(':id')
+  @ApiOperation({ summary: 'Eliminar contacto de emergencia por ID (soft delete)' })
+  @ApiParam({ name: 'id', type: Number, example: 1 })
+  @ApiOkResponse({ description: 'Contacto eliminado' })
   async remove(
     @Req() request: RequestWithUser,
     @Param('id', ParseIntPipe) id: number,

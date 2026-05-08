@@ -10,15 +10,17 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { Request } from 'express';
 import {
   ApiBearerAuth,
+  ApiBody,
   ApiCreatedResponse,
   ApiOkResponse,
   ApiOperation,
   ApiParam,
+  ApiSecurity,
   ApiTags,
 } from '@nestjs/swagger';
+import { Request } from 'express';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CreateIncidentAlertDto } from './dto/create-incident-alert.dto';
 import { UpdateIncidentAlertDto } from './dto/update-incident-alert.dto';
@@ -31,8 +33,9 @@ type RequestWithUser = Request & {
   };
 };
 
-@ApiTags('Alertas')
-@ApiBearerAuth()
+@ApiTags('Alertas de incidentes')
+@ApiSecurity('x-api-key')
+@ApiBearerAuth('bearer')
 @UseGuards(JwtAuthGuard)
 @Controller('alertas')
 export class IncidentAlertsController {
@@ -75,6 +78,8 @@ export class IncidentAlertsController {
     },
   })
   @Post()
+  @ApiBody({ type: CreateIncidentAlertDto })
+  @ApiOkResponse({ description: 'Alerta creada' })
   async create(
     @Req() request: RequestWithUser,
     @Body() createAlertDto: CreateIncidentAlertDto,
@@ -115,6 +120,7 @@ export class IncidentAlertsController {
     },
   })
   @Get()
+  @ApiOkResponse({ description: 'Alertas obtenidas' })
   async findAll(@Req() request: RequestWithUser) {
     const alerts = await this.incidentAlertsService.findAllByUser(
       request.user.sub,
@@ -143,6 +149,9 @@ export class IncidentAlertsController {
     },
   })
   @Get(':id')
+  @ApiOperation({ summary: 'Obtener alerta por ID' })
+  @ApiParam({ name: 'id', type: Number, example: 1 })
+  @ApiOkResponse({ description: 'Alerta obtenida' })
   async findOne(
     @Req() request: RequestWithUser,
     @Param('id', ParseIntPipe) id: number,
@@ -175,6 +184,9 @@ export class IncidentAlertsController {
     },
   })
   @Patch(':id')
+  @ApiParam({ name: 'id', type: Number, example: 1 })
+  @ApiBody({ type: UpdateIncidentAlertDto })
+  @ApiOkResponse({ description: 'Alerta actualizada' })
   async update(
     @Req() request: RequestWithUser,
     @Param('id', ParseIntPipe) id: number,
@@ -201,6 +213,9 @@ export class IncidentAlertsController {
     },
   })
   @Delete(':id')
+  @ApiOperation({ summary: 'Eliminar alerta por ID (soft delete)' })
+  @ApiParam({ name: 'id', type: Number, example: 1 })
+  @ApiOkResponse({ description: 'Alerta eliminada' })
   async remove(
     @Req() request: RequestWithUser,
     @Param('id', ParseIntPipe) id: number,

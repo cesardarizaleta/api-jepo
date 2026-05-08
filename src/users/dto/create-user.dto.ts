@@ -6,8 +6,8 @@ import { normalizeCedula } from '../../common/utils/cedula.util';
 
 export class CreateUserDto {
   @ApiProperty({
-    example: 12123456,
-    description: 'Cedula del usuario',
+    example: 'V-12345678',
+    description: 'Cedula del usuario. Se normaliza internamente.',
   })
   @IsCedula({ message: 'Cédula inválida' })
   @Transform(({ value }) => {
@@ -16,41 +16,31 @@ export class CreateUserDto {
   }, { toClassOnly: true })
   cedula: number;
 
-  @ApiProperty({
-    example: 'Maria',
-    description: 'Nombre del usuario',
-  })
+  @ApiProperty({ example: 'Maria', minLength: 2, maxLength: 80 })
   @IsString()
   @Length(2, 80)
   nombre: string;
 
-  @ApiProperty({
-    example: 'Perez',
-    description: 'Apellido del usuario',
-  })
+  @ApiProperty({ example: 'Perez', minLength: 2, maxLength: 80 })
   @IsString()
   @Length(2, 80)
   apellido: string;
 
-  @ApiProperty({
-    example: 'maria.perez@jepo.com',
-    description: 'Correo unico del usuario',
-  })
+  @ApiProperty({ example: 'maria.perez@jepo.com', format: 'email', minLength: 5, maxLength: 120 })
   @IsEmail()
   @Length(5, 120)
   email: string;
 
-  @ApiProperty({
-    example: '+584121112233',
-    description: 'Telefono principal del usuario',
-  })
+  @ApiProperty({ example: '+584121112233', minLength: 7, maxLength: 30 })
   @IsString()
   @Length(7, 30)
   telefono: string;
 
   @ApiProperty({
-    example: 'MiClave#2026',
-    description: 'Contrasena fuerte del usuario',
+    example: 'Passw0rd!Segura',
+    minLength: 8,
+    maxLength: 72,
+    description: 'Debe incluir mayuscula, minuscula, numero y caracter especial.',
   })
   @IsString()
   @Length(8, 72)
@@ -60,10 +50,7 @@ export class CreateUserDto {
   })
   password: string;
 
-  @ApiPropertyOptional({
-    example: 'fcm_token_ABC123XYZ',
-    description: 'Token FCM para notificaciones push',
-  })
+  @ApiPropertyOptional({ example: 'fcm_device_token_abc123456789', minLength: 10, maxLength: 255 })
   @IsOptional()
   @IsString()
   @Length(10, 255)

@@ -26,22 +26,22 @@ export class EmergencyContactsService {
     idUsuario: number,
     createContactDto: CreateEmergencyContactDto,
   ): Promise<EmergencyContact> {
-    await this.ensureUserExists(idUsuario);
-    await this.ensureMaxContactsRule(idUsuario);
-    await this.ensureUniquePhone(idUsuario, createContactDto.telefono_contacto);
+    const user = await this.ensureUserExists(idUsuario);
+    await this.ensureMaxContactsRule(user.cedula);
+    await this.ensureUniquePhone(user.cedula, createContactDto.telefono_contacto);
 
     const contact = this.contactsRepository.create({
       ...createContactDto,
-      id_usuario: idUsuario,
+      id_usuario: user.cedula,
     });
 
     return this.contactsRepository.save(contact);
   }
 
   async findAllByUser(idUsuario: number): Promise<EmergencyContact[]> {
-    await this.ensureUserExists(idUsuario);
+    const user = await this.ensureUserExists(idUsuario);
     return this.contactsRepository.find({
-      where: { id_usuario: idUsuario },
+      where: { id_usuario: user.cedula },
       order: { prioridad: 'ASC', id: 'ASC' },
     });
   }
@@ -50,9 +50,9 @@ export class EmergencyContactsService {
     idUsuario: number,
     id: number,
   ): Promise<EmergencyContact> {
-    await this.ensureUserExists(idUsuario);
+    const user = await this.ensureUserExists(idUsuario);
     const contact = await this.contactsRepository.findOne({
-      where: { id, id_usuario: idUsuario },
+      where: { id, id_usuario: user.cedula },
     });
 
     if (!contact) {
@@ -84,22 +84,24 @@ export class EmergencyContactsService {
   }
 
   async remove(idUsuario: number, id: number): Promise<void> {
+    const user = await this.ensureUserExists(idUsuario);
     await this.findOneByUser(idUsuario, id);
-    await this.contactsRepository.softDelete({ id, id_usuario: idUsuario });
+    await this.contactsRepository.softDelete({ id, id_usuario: user.cedula });
   }
 
-  private async ensureUserExists(idUsuario: number): Promise<void> {
+  private async ensureUserExists(idUsuario: number): Promise<User> {
     const user = await this.usersRepository.findOne({
       where: { id: idUsuario },
     });
     if (!user) {
       throw new NotFoundException('Usuario no encontrado');
     }
+    return user;
   }
 
-  private async ensureMaxContactsRule(idUsuario: number): Promise<void> {
+  private async ensureMaxContactsRule(cedula: number): Promise<void> {
     const totalContacts = await this.contactsRepository.count({
-      where: { id_usuario: idUsuario },
+      where: { id_usuario: cedula },
     });
     if (totalContacts >= EmergencyContactsService.MAX_CONTACTS) {
       throw new BadRequestException(
@@ -109,11 +111,11 @@ export class EmergencyContactsService {
   }
 
   private async ensureUniquePhone(
-    idUsuario: number,
+    cedula: number,
     telefonoContacto: string,
   ): Promise<void> {
     const existing = await this.contactsRepository.findOne({
-      where: { id_usuario: idUsuario, telefono_contacto: telefonoContacto },
+      where: { id_usuario: cedula, telefono_contacto: telefonoContacto },
     });
     if (existing) {
       throw new ConflictException(

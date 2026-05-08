@@ -3,8 +3,10 @@ import { ApiProperty } from '@nestjs/swagger';
 
 export class UpdateTokenDto {
   @ApiProperty({
-    example: 'fcm_token_movil_usuario_001',
+    example: 'fcm_device_token_abc123456789',
     description: 'Token FCM actualizado del dispositivo',
+    minLength: 10,
+    maxLength: 255,
   })
   @IsString()
   @Length(10, 255)

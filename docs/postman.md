@@ -4,6 +4,9 @@
 
 - Coleccion: docs/Jepo.postman_collection.json
 - Environment: docs/Jepo.postman_environment.json
+- Documentacion completa: docs/API_FULL.md
+- Swagger UI: /api/docs
+- OpenAPI JSON: /api/docs-json
 
 ## Variables importantes
 
@@ -25,3 +28,4 @@
 - Todas las rutas usan x-api-key.
 - Rutas protegidas (Me, Contactos, Alertas) tambien requieren Authorization Bearer {{jwt}}.
 - La coleccion incluye scripts de test para guardar automaticamente jwt, userId, contactId y alertId cuando la respuesta los trae.
+- Para integrar un cliente (web/movil), usar como referencia principal docs/API_FULL.md y validar esquemas en /api/docs-json.

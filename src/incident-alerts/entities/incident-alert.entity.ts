@@ -3,6 +3,7 @@ import {
   CreateDateColumn,
   DeleteDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -15,10 +16,19 @@ export class IncidentAlert {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ name: 'cedula_usuario', type: 'integer' })
+  @Index()
+  @Column({
+    name: 'cedula_usuario',
+    type: 'bigint',
+    nullable: true,
+    transformer: {
+      to: (value: number) => value,
+      from: (value: string) => (value ? Number(value) : value),
+    },
+  })
   id_usuario: number;
 
-  @ManyToOne(() => User, (user) => user.alertas, { nullable: false })
+  @ManyToOne(() => User, (user) => user.alertas, { nullable: true })
   @JoinColumn({ name: 'cedula_usuario', referencedColumnName: 'cedula' })
   usuario: User;
 
@@ -31,6 +41,7 @@ export class IncidentAlert {
   @Column({ name: 'url_audio_contexto', type: 'text' })
   url_audio_contexto: string;
 
+  @Index()
   @Column({
     name: 'fecha_hora',
     type: 'timestamp',

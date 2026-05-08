@@ -9,29 +9,29 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateIncidentAlertDto {
   @ApiProperty({
-    example: 10.50234567,
+  example: 10.50234567,
     description: 'Latitud con precision maxima de 8 decimales',
   })
   @IsNumber({ maxDecimalPlaces: 8 })
   latitud: number;
 
   @ApiProperty({
-    example: -66.91234567,
+  example: -66.91234567,
     description: 'Longitud con precision maxima de 8 decimales',
   })
   @IsNumber({ maxDecimalPlaces: 8 })
   longitud: number;
 
   @ApiProperty({
-    example: 'https://storage.jepo.com/audio/contexto-123.mp3',
-    description: 'URL del audio de contexto capturado en el incidente',
+  example: 'https://storage.jepo.com/audio/contexto-123.mp3',
+  description: 'URL del audio de contexto capturado en el incidente',
   })
   @IsUrl({ require_protocol: true })
   url_audio_contexto: string;
 
   @ApiPropertyOptional({
-    example: '2026-05-08T10:30:00.000Z',
-    description: 'Fecha y hora ISO del incidente',
+  example: '2026-05-08T10:30:00.000Z',
+  description: 'Fecha y hora ISO del incidente',
   })
   @IsOptional()
   @IsDateString()
@@ -39,7 +39,7 @@ export class CreateIncidentAlertDto {
 
   @ApiProperty({
     example: true,
-    description: 'Indica si la alerta fue detectada de forma proactiva',
+  description: 'Indica si la alerta fue detectada de forma proactiva',
   })
   @IsBoolean()
   es_proactiva: boolean;
