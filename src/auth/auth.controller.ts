@@ -7,6 +7,13 @@ import {
   Post,
 } from '@nestjs/common';
 import { Request } from 'express';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Public } from '../common/decorators/public.decorator';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { UsersService } from '../users/users.service';
@@ -21,6 +28,7 @@ type RequestWithUser = Request & {
   };
 };
 
+@ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -29,6 +37,28 @@ export class AuthController {
   ) {}
 
   @Public()
+  @ApiOperation({ summary: 'Registrar usuario y generar token JWT' })
+  @ApiCreatedResponse({
+    description: 'Registro exitoso',
+    schema: {
+      example: {
+        success: true,
+        message: 'Registro exitoso',
+        data: {
+          access_token: '<jwt_token>',
+          user: {
+            id: 1,
+            cedula: 12123456,
+            nombre: 'Maria',
+            apellido: 'Perez',
+            email: 'maria.perez@jepo.com',
+            telefono: '+584121112233',
+            token_fcm: 'fcm_token_ABC123XYZ',
+          },
+        },
+      },
+    },
+  })
   @Post('register')
   async register(@Body() registerDto: RegisterDto) {
     const result = await this.authService.register(registerDto);
@@ -39,6 +69,28 @@ export class AuthController {
   }
 
   @Public()
+  @ApiOperation({ summary: 'Iniciar sesion y obtener token JWT' })
+  @ApiOkResponse({
+    description: 'Login exitoso',
+    schema: {
+      example: {
+        success: true,
+        message: 'Login exitoso',
+        data: {
+          access_token: '<jwt_token>',
+          user: {
+            id: 1,
+            cedula: 12123456,
+            nombre: 'Maria',
+            apellido: 'Perez',
+            email: 'maria.perez@jepo.com',
+            telefono: '+584121112233',
+            token_fcm: 'fcm_token_ABC123XYZ',
+          },
+        },
+      },
+    },
+  })
   @Post('login')
   async login(@Body() loginDto: LoginDto) {
     const result = await this.authService.login(loginDto);
@@ -49,6 +101,26 @@ export class AuthController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Obtener datos del usuario autenticado' })
+  @ApiOkResponse({
+    description: 'Sesion valida',
+    schema: {
+      example: {
+        success: true,
+        message: 'Sesion valida',
+        data: {
+          id: 1,
+          cedula: 12123456,
+          nombre: 'Maria',
+          apellido: 'Perez',
+          email: 'maria.perez@jepo.com',
+          telefono: '+584121112233',
+          token_fcm: 'fcm_token_ABC123XYZ',
+        },
+      },
+    },
+  })
   @Get('me')
   async me(@Req() request: RequestWithUser) {
     const user = await this.usersService.findOne(request.user.sub);

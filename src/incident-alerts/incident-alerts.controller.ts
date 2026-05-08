@@ -11,6 +11,14 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { Request } from 'express';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CreateIncidentAlertDto } from './dto/create-incident-alert.dto';
 import { UpdateIncidentAlertDto } from './dto/update-incident-alert.dto';
@@ -23,11 +31,49 @@ type RequestWithUser = Request & {
   };
 };
 
+@ApiTags('Alertas')
+@ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('alertas')
 export class IncidentAlertsController {
   constructor(private readonly incidentAlertsService: IncidentAlertsService) {}
 
+  @ApiOperation({ summary: 'Crear alerta de incidente del usuario autenticado' })
+  @ApiCreatedResponse({
+    description: 'Alerta creada',
+    schema: {
+      example: {
+        success: true,
+        message: 'Alerta creada',
+        data: {
+          alerta: {
+            id: 100,
+            id_usuario: 1,
+            latitud: 10.50234567,
+            longitud: -66.91234567,
+            url_audio_contexto: 'https://storage.jepo.com/audio/contexto-123.mp3',
+            fecha_hora: '2026-05-08T10:30:00.000Z',
+            es_proactiva: true,
+          },
+          contactosNotificar: [
+            {
+              id: 10,
+              nombre_contacto: 'Juan Lopez',
+              telefono_contacto: '+584141234567',
+              prioridad: 1,
+            },
+          ],
+          notificaciones: [
+            {
+              contactoId: 10,
+              enviado: true,
+              detalle: 'Mensaje enviado por Evolution API',
+            },
+          ],
+        },
+      },
+    },
+  })
   @Post()
   async create(
     @Req() request: RequestWithUser,
@@ -47,6 +93,27 @@ export class IncidentAlertsController {
     };
   }
 
+  @ApiOperation({ summary: 'Listar alertas del usuario autenticado' })
+  @ApiOkResponse({
+    description: 'Alertas obtenidas',
+    schema: {
+      example: {
+        success: true,
+        message: 'Alertas obtenidas',
+        data: [
+          {
+            id: 100,
+            id_usuario: 1,
+            latitud: 10.50234567,
+            longitud: -66.91234567,
+            url_audio_contexto: 'https://storage.jepo.com/audio/contexto-123.mp3',
+            fecha_hora: '2026-05-08T10:30:00.000Z',
+            es_proactiva: true,
+          },
+        ],
+      },
+    },
+  })
   @Get()
   async findAll(@Req() request: RequestWithUser) {
     const alerts = await this.incidentAlertsService.findAllByUser(
@@ -55,6 +122,26 @@ export class IncidentAlertsController {
     return { message: 'Alertas obtenidas', data: alerts };
   }
 
+  @ApiOperation({ summary: 'Obtener alerta por ID' })
+  @ApiParam({ name: 'id', type: Number, example: 100 })
+  @ApiOkResponse({
+    description: 'Alerta obtenida',
+    schema: {
+      example: {
+        success: true,
+        message: 'Alerta obtenida',
+        data: {
+          id: 100,
+          id_usuario: 1,
+          latitud: 10.50234567,
+          longitud: -66.91234567,
+          url_audio_contexto: 'https://storage.jepo.com/audio/contexto-123.mp3',
+          fecha_hora: '2026-05-08T10:30:00.000Z',
+          es_proactiva: true,
+        },
+      },
+    },
+  })
   @Get(':id')
   async findOne(
     @Req() request: RequestWithUser,
@@ -67,6 +154,26 @@ export class IncidentAlertsController {
     return { message: 'Alerta obtenida', data: alert };
   }
 
+  @ApiOperation({ summary: 'Actualizar alerta por ID' })
+  @ApiParam({ name: 'id', type: Number, example: 100 })
+  @ApiOkResponse({
+    description: 'Alerta actualizada',
+    schema: {
+      example: {
+        success: true,
+        message: 'Alerta actualizada',
+        data: {
+          id: 100,
+          id_usuario: 1,
+          latitud: 10.5,
+          longitud: -66.9,
+          url_audio_contexto: 'https://storage.jepo.com/audio/contexto-actualizado.mp3',
+          fecha_hora: '2026-05-08T11:05:00.000Z',
+          es_proactiva: false,
+        },
+      },
+    },
+  })
   @Patch(':id')
   async update(
     @Req() request: RequestWithUser,
@@ -81,6 +188,18 @@ export class IncidentAlertsController {
     return { message: 'Alerta actualizada', data: alert };
   }
 
+  @ApiOperation({ summary: 'Eliminar alerta por ID' })
+  @ApiParam({ name: 'id', type: Number, example: 100 })
+  @ApiOkResponse({
+    description: 'Alerta eliminada',
+    schema: {
+      example: {
+        success: true,
+        message: 'Alerta eliminada',
+        data: null,
+      },
+    },
+  })
   @Delete(':id')
   async remove(
     @Req() request: RequestWithUser,

@@ -11,6 +11,14 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { Request } from 'express';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CreateEmergencyContactDto } from './dto/create-emergency-contact.dto';
 import { UpdateEmergencyContactDto } from './dto/update-emergency-contact.dto';
@@ -23,6 +31,8 @@ type RequestWithUser = Request & {
   };
 };
 
+@ApiTags('Contactos de Emergencia')
+@ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('usuarios/contactos')
 export class EmergencyContactsController {
@@ -30,6 +40,23 @@ export class EmergencyContactsController {
     private readonly emergencyContactsService: EmergencyContactsService,
   ) {}
 
+  @ApiOperation({ summary: 'Crear contacto de emergencia del usuario autenticado' })
+  @ApiCreatedResponse({
+    description: 'Contacto de emergencia creado',
+    schema: {
+      example: {
+        success: true,
+        message: 'Contacto de emergencia creado',
+        data: {
+          id: 10,
+          id_usuario: 1,
+          nombre_contacto: 'Juan Lopez',
+          telefono_contacto: '+584141234567',
+          prioridad: 1,
+        },
+      },
+    },
+  })
   @Post()
   async create(
     @Req() request: RequestWithUser,
@@ -42,6 +69,25 @@ export class EmergencyContactsController {
     return { message: 'Contacto de emergencia creado', data: contact };
   }
 
+  @ApiOperation({ summary: 'Listar contactos de emergencia del usuario autenticado' })
+  @ApiOkResponse({
+    description: 'Contactos obtenidos',
+    schema: {
+      example: {
+        success: true,
+        message: 'Contactos obtenidos',
+        data: [
+          {
+            id: 10,
+            id_usuario: 1,
+            nombre_contacto: 'Juan Lopez',
+            telefono_contacto: '+584141234567',
+            prioridad: 1,
+          },
+        ],
+      },
+    },
+  })
   @Get()
   async findAll(@Req() request: RequestWithUser) {
     const contacts =
@@ -49,6 +95,24 @@ export class EmergencyContactsController {
     return { message: 'Contactos obtenidos', data: contacts };
   }
 
+  @ApiOperation({ summary: 'Obtener contacto de emergencia por ID' })
+  @ApiParam({ name: 'id', type: Number, example: 10 })
+  @ApiOkResponse({
+    description: 'Contacto obtenido',
+    schema: {
+      example: {
+        success: true,
+        message: 'Contacto obtenido',
+        data: {
+          id: 10,
+          id_usuario: 1,
+          nombre_contacto: 'Juan Lopez',
+          telefono_contacto: '+584141234567',
+          prioridad: 1,
+        },
+      },
+    },
+  })
   @Get(':id')
   async findOne(
     @Req() request: RequestWithUser,
@@ -61,6 +125,24 @@ export class EmergencyContactsController {
     return { message: 'Contacto obtenido', data: contact };
   }
 
+  @ApiOperation({ summary: 'Actualizar contacto de emergencia por ID' })
+  @ApiParam({ name: 'id', type: Number, example: 10 })
+  @ApiOkResponse({
+    description: 'Contacto actualizado',
+    schema: {
+      example: {
+        success: true,
+        message: 'Contacto actualizado',
+        data: {
+          id: 10,
+          id_usuario: 1,
+          nombre_contacto: 'Carlos Romero',
+          telefono_contacto: '+584121998877',
+          prioridad: 2,
+        },
+      },
+    },
+  })
   @Patch(':id')
   async update(
     @Req() request: RequestWithUser,
@@ -75,6 +157,18 @@ export class EmergencyContactsController {
     return { message: 'Contacto actualizado', data: contact };
   }
 
+  @ApiOperation({ summary: 'Eliminar contacto de emergencia por ID' })
+  @ApiParam({ name: 'id', type: Number, example: 10 })
+  @ApiOkResponse({
+    description: 'Contacto eliminado',
+    schema: {
+      example: {
+        success: true,
+        message: 'Contacto eliminado',
+        data: null,
+      },
+    },
+  })
   @Delete(':id')
   async remove(
     @Req() request: RequestWithUser,
