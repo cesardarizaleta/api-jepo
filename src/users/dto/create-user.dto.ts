@@ -1,4 +1,10 @@
-import { IsEmail, IsOptional, IsString, Length, Matches } from 'class-validator';
+import {
+  IsEmail,
+  IsOptional,
+  IsString,
+  Length,
+  Matches,
+} from 'class-validator';
 import { Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsCedula } from '../../common/validators/cedula.validator';
@@ -10,10 +16,13 @@ export class CreateUserDto {
     description: 'Cedula del usuario. Se normaliza internamente.',
   })
   @IsCedula({ message: 'Cédula inválida' })
-  @Transform(({ value }) => {
-    const n = normalizeCedula(value);
-    return n === null ? null : Number(n);
-  }, { toClassOnly: true })
+  @Transform(
+    ({ value }) => {
+      const n = normalizeCedula(value);
+      return n === null ? null : Number(n);
+    },
+    { toClassOnly: true },
+  )
   cedula: number;
 
   @ApiProperty({ example: 'Maria', minLength: 2, maxLength: 80 })
@@ -26,7 +35,12 @@ export class CreateUserDto {
   @Length(2, 80)
   apellido: string;
 
-  @ApiProperty({ example: 'maria.perez@jepo.com', format: 'email', minLength: 5, maxLength: 120 })
+  @ApiProperty({
+    example: 'maria.perez@jepo.com',
+    format: 'email',
+    minLength: 5,
+    maxLength: 120,
+  })
   @IsEmail()
   @Length(5, 120)
   email: string;
@@ -40,7 +54,8 @@ export class CreateUserDto {
     example: 'Passw0rd!Segura',
     minLength: 8,
     maxLength: 72,
-    description: 'Debe incluir mayuscula, minuscula, numero y caracter especial.',
+    description:
+      'Debe incluir mayuscula, minuscula, numero y caracter especial.',
   })
   @IsString()
   @Length(8, 72)
@@ -50,7 +65,11 @@ export class CreateUserDto {
   })
   password: string;
 
-  @ApiPropertyOptional({ example: 'fcm_device_token_abc123456789', minLength: 10, maxLength: 255 })
+  @ApiPropertyOptional({
+    example: 'fcm_device_token_abc123456789',
+    minLength: 10,
+    maxLength: 255,
+  })
   @IsOptional()
   @IsString()
   @Length(10, 255)

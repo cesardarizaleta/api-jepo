@@ -7,4 +7,4 @@ import { TypeOrmModule } from '@nestjs/typeorm';
   imports: [TerminusModule, TypeOrmModule],
   controllers: [HealthController],
 })
-export class HealthModule { }
+export class HealthModule {}

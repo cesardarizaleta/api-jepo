@@ -33,6 +33,9 @@ export function configureApp(app: INestApplication): void {
       },
     }),
   );
-  app.useGlobalInterceptors(new ResponseInterceptor(), new TimeoutInterceptor());
+  app.useGlobalInterceptors(
+    new ResponseInterceptor(),
+    new TimeoutInterceptor(),
+  );
   app.useGlobalFilters(new HttpExceptionFilter());
 }

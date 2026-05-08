@@ -43,7 +43,9 @@ export class EmergencyContactsController {
     private readonly emergencyContactsService: EmergencyContactsService,
   ) {}
 
-  @ApiOperation({ summary: 'Crear contacto de emergencia del usuario autenticado' })
+  @ApiOperation({
+    summary: 'Crear contacto de emergencia del usuario autenticado',
+  })
   @ApiCreatedResponse({
     description: 'Contacto de emergencia creado',
     schema: {
@@ -74,7 +76,9 @@ export class EmergencyContactsController {
     return { message: 'Contacto de emergencia creado', data: contact };
   }
 
-  @ApiOperation({ summary: 'Listar contactos de emergencia del usuario autenticado' })
+  @ApiOperation({
+    summary: 'Listar contactos de emergencia del usuario autenticado',
+  })
   @ApiOkResponse({
     description: 'Contactos obtenidos',
     schema: {
@@ -96,8 +100,9 @@ export class EmergencyContactsController {
   @Get()
   @ApiOkResponse({ description: 'Contactos obtenidos' })
   async findAll(@Req() request: RequestWithUser) {
-    const contacts =
-      await this.emergencyContactsService.findAllByUser(request.user.sub);
+    const contacts = await this.emergencyContactsService.findAllByUser(
+      request.user.sub,
+    );
     return { message: 'Contactos obtenidos', data: contacts };
   }
 
@@ -182,7 +187,9 @@ export class EmergencyContactsController {
     },
   })
   @Delete(':id')
-  @ApiOperation({ summary: 'Eliminar contacto de emergencia por ID (soft delete)' })
+  @ApiOperation({
+    summary: 'Eliminar contacto de emergencia por ID (soft delete)',
+  })
   @ApiParam({ name: 'id', type: Number, example: 1 })
   @ApiOkResponse({ description: 'Contacto eliminado' })
   async remove(

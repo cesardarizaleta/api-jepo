@@ -28,7 +28,10 @@ export class EmergencyContactsService {
   ): Promise<EmergencyContact> {
     const user = await this.ensureUserExists(idUsuario);
     await this.ensureMaxContactsRule(user.cedula);
-    await this.ensureUniquePhone(user.cedula, createContactDto.telefono_contacto);
+    await this.ensureUniquePhone(
+      user.cedula,
+      createContactDto.telefono_contacto,
+    );
 
     const contact = this.contactsRepository.create({
       ...createContactDto,

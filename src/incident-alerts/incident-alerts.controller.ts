@@ -41,7 +41,9 @@ type RequestWithUser = Request & {
 export class IncidentAlertsController {
   constructor(private readonly incidentAlertsService: IncidentAlertsService) {}
 
-  @ApiOperation({ summary: 'Crear alerta de incidente del usuario autenticado' })
+  @ApiOperation({
+    summary: 'Crear alerta de incidente del usuario autenticado',
+  })
   @ApiCreatedResponse({
     description: 'Alerta creada',
     schema: {
@@ -54,7 +56,8 @@ export class IncidentAlertsController {
             id_usuario: 1,
             latitud: 10.50234567,
             longitud: -66.91234567,
-            url_audio_contexto: 'https://storage.jepo.com/audio/contexto-123.mp3',
+            url_audio_contexto:
+              'https://storage.jepo.com/audio/contexto-123.mp3',
             fecha_hora: '2026-05-08T10:30:00.000Z',
             es_proactiva: true,
           },
@@ -111,7 +114,8 @@ export class IncidentAlertsController {
             id_usuario: 1,
             latitud: 10.50234567,
             longitud: -66.91234567,
-            url_audio_contexto: 'https://storage.jepo.com/audio/contexto-123.mp3',
+            url_audio_contexto:
+              'https://storage.jepo.com/audio/contexto-123.mp3',
             fecha_hora: '2026-05-08T10:30:00.000Z',
             es_proactiva: true,
           },
@@ -176,7 +180,8 @@ export class IncidentAlertsController {
           id_usuario: 1,
           latitud: 10.5,
           longitud: -66.9,
-          url_audio_contexto: 'https://storage.jepo.com/audio/contexto-actualizado.mp3',
+          url_audio_contexto:
+            'https://storage.jepo.com/audio/contexto-actualizado.mp3',
           fecha_hora: '2026-05-08T11:05:00.000Z',
           es_proactiva: false,
         },

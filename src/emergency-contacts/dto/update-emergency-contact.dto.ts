@@ -2,13 +2,21 @@ import { IsInt, IsOptional, IsString, Length, Max, Min } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateEmergencyContactDto {
-  @ApiPropertyOptional({ example: 'Carlos Romero', minLength: 2, maxLength: 120 })
+  @ApiPropertyOptional({
+    example: 'Carlos Romero',
+    minLength: 2,
+    maxLength: 120,
+  })
   @IsOptional()
   @IsString()
   @Length(2, 120)
   nombre_contacto?: string;
 
-  @ApiPropertyOptional({ example: '+584121998877', minLength: 7, maxLength: 30 })
+  @ApiPropertyOptional({
+    example: '+584121998877',
+    minLength: 7,
+    maxLength: 30,
+  })
   @IsOptional()
   @IsString()
   @Length(7, 30)

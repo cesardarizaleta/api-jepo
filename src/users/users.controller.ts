@@ -9,20 +9,12 @@ import {
   Post,
 } from '@nestjs/common';
 import {
-<<<<<<< HEAD
-  ApiBearerAuth,
+  ApiBody,
   ApiCreatedResponse,
   ApiOkResponse,
   ApiOperation,
   ApiParam,
-=======
-  ApiBody,
-    ApiBody,
-    ApiCreatedResponse,
-    ApiOkResponse,
-    ApiOperation,
-    ApiParam,
-    ApiSecurity,
+  ApiSecurity,
   ApiTags,
 } from '@nestjs/swagger';
 import { CreateUserDto } from './dto/create-user.dto';

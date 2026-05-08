@@ -127,7 +127,9 @@ export class AuthController {
   @ApiBearerAuth('bearer')
   @ApiOperation({ summary: 'Obtener sesion actual' })
   @ApiOkResponse({ description: 'Sesion valida' })
-  @ApiUnauthorizedResponse({ description: 'Token ausente, invalido o expirado' })
+  @ApiUnauthorizedResponse({
+    description: 'Token ausente, invalido o expirado',
+  })
   async me(@Req() request: RequestWithUser) {
     const user = await this.usersService.findOne(request.user.sub);
     return {

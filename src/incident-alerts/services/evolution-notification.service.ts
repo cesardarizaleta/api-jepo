@@ -70,7 +70,7 @@ export class EvolutionNotificationService {
     const settled = await Promise.allSettled(tasks);
     const results: EvolutionSendResult[] = settled.map((s, idx) => {
       if (s.status === 'fulfilled') {
-        return s.value as EvolutionSendResult;
+        return s.value;
       }
       // Fallback en caso de error inesperado
       const contact = contacts[idx];
@@ -78,7 +78,7 @@ export class EvolutionNotificationService {
         contactId: contact?.id ?? -1,
         telefono: contact?.telefono_contacto ?? '',
         success: false,
-        error: String((s as PromiseRejectedResult).reason ?? 'Error desconocido'),
+        error: String(s.reason ?? 'Error desconocido'),
       } as EvolutionSendResult;
     });
 
@@ -89,7 +89,10 @@ export class EvolutionNotificationService {
     return Boolean(this.baseUrl && this.instance && this.apiKey);
   }
 
-  private buildAlertMessage(alert: IncidentAlert, userFullName: string): string {
+  private buildAlertMessage(
+    alert: IncidentAlert,
+    userFullName: string,
+  ): string {
     const mapsLink = `https://maps.google.com/?q=${alert.latitud},${alert.longitud}`;
     return [
       '🚨 *ALERTA DE EMERGENCIA*',

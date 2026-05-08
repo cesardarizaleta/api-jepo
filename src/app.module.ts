@@ -71,4 +71,4 @@ import { HealthModule } from './setup/health/health.module';
     },
   ],
 })
-export class AppModule { }
+export class AppModule {}

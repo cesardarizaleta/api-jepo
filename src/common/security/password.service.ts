@@ -50,6 +50,10 @@ export class PasswordService {
     keyLength: number = PasswordService.KEY_LENGTH,
   ): Promise<Buffer> {
     const pepper = this.configService.get<string>('PASSWORD_PEPPER', '');
-    return (await scrypt(`${plainPassword}${pepper}`, salt, keyLength)) as Buffer;
+    return (await scrypt(
+      `${plainPassword}${pepper}`,
+      salt,
+      keyLength,
+    )) as Buffer;
   }
 }

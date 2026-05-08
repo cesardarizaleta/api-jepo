@@ -25,7 +25,9 @@ export class UsersService {
     await this.validateUniqueEmail(createUserDto.email);
     await this.validateUniqueCedula(createUserDto.cedula);
 
-    const passwordHash = await this.passwordService.hash(createUserDto.password);
+    const passwordHash = await this.passwordService.hash(
+      createUserDto.password,
+    );
     const user = this.usersRepository.create({
       cedula: createUserDto.cedula,
       nombre: createUserDto.nombre,

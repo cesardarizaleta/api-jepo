@@ -9,7 +9,13 @@ class TestDto {
 
 describe('IsCedula validator', () => {
   it('accepts valid cedulas', async () => {
-    const valids = ['V-12345678', '12345678', 'v1234567', 'E 00123456', '0012345'];
+    const valids = [
+      'V-12345678',
+      '12345678',
+      'v1234567',
+      'E 00123456',
+      '0012345',
+    ];
     for (const v of valids) {
       const dto = new TestDto();
       dto.cedula = v;

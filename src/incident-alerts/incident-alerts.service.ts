@@ -54,7 +54,7 @@ export class IncidentAlertsService {
     const savedAlert = await this.alertsRepository.save(alert);
 
     let contactosNotificar: EmergencyContact[] = [];
-    let notificaciones: AlertCreateResult['notificaciones'] = null;
+    const notificaciones: AlertCreateResult['notificaciones'] = null;
 
     if (savedAlert.es_proactiva) {
       contactosNotificar = await this.contactsRepository.find({
@@ -77,7 +77,10 @@ export class IncidentAlertsService {
           // Opcional: persistir `detail` en BD para auditoría.
         })
         .catch((err) => {
-          this.logger.error('Error enviando notificaciones por Evolution API', err as any);
+          this.logger.error(
+            'Error enviando notificaciones por Evolution API',
+            err,
+          );
         });
     }
 
