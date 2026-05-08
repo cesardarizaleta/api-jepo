@@ -10,7 +10,7 @@ export class CreateEmergencyContactDto {
   })
   @IsString()
   @Length(2, 120)
-  nombre_contacto: string;
+  nombre_contacto!: string;
 
   @ApiProperty({
     example: '+584141234567',
@@ -20,7 +20,7 @@ export class CreateEmergencyContactDto {
   })
   @IsString()
   @Length(7, 30)
-  telefono_contacto: string;
+  telefono_contacto!: string;
 
   @ApiProperty({
     example: 1,
@@ -31,5 +31,5 @@ export class CreateEmergencyContactDto {
   @IsInt()
   @Min(1)
   @Max(5)
-  prioridad: number;
+  prioridad!: number;
 }
