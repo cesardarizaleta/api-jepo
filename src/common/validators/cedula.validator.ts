@@ -10,6 +10,7 @@ import { isValidCedulaVE } from '../utils/cedula.util';
 @ValidatorConstraint({ name: 'IsCedula', async: false })
 export class IsCedulaConstraint implements ValidatorConstraintInterface {
   validate(value: any, _args?: ValidationArguments): boolean {
+    void _args;
     return isValidCedulaVE(value);
   }
 

@@ -1,7 +1,7 @@
 export function normalizeCedula(value: any): string | null {
   if (value === null || value === undefined) return null;
   const s = String(value).trim().toUpperCase();
-  const cleaned = s.replace(/[\s.\-]/g, '');
+  const cleaned = s.replace(/[\s.-]/g, '');
   const withoutPrefix = cleaned.replace(/^[VE]/, '');
   if (!/^\d+$/.test(withoutPrefix)) return null;
   return withoutPrefix;

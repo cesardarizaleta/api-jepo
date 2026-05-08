@@ -7,8 +7,10 @@ import { HttpExceptionFilter } from '../common/filters/http-exception.filter';
 
 export function configureApp(app: INestApplication): void {
   app.setGlobalPrefix('api');
-  app.use(helmet());
-  app.use(compression());
+  const helmetFn = helmet as unknown as (...args: any[]) => any;
+  const compressionFn = compression as unknown as (...args: any[]) => any;
+  app.use(helmetFn());
+  app.use(compressionFn());
 
   const corsEnabled = process.env.CORS_ENABLED !== 'false';
   if (corsEnabled) {
