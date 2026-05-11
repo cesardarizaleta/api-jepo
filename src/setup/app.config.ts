@@ -12,20 +12,11 @@ export function configureApp(app: INestApplication): void {
   app.use(helmetFn());
   app.use(compressionFn());
 
-  const corsEnabled = process.env.CORS_ENABLED !== 'false';
-  if (corsEnabled) {
-    const corsOrigins = (process.env.CORS_ORIGINS ?? '')
-      .split(',')
-      .map((origin) => origin.trim())
-      .filter((origin) => origin.length > 0);
-
-    app.enableCors({
-      origin: corsOrigins.length > 0 ? corsOrigins : true,
-      credentials: true,
-      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'x-api-key'],
-    });
-  }
+  app.enableCors({
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'x-api-key'],
+  });
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
