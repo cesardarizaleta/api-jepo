@@ -2,7 +2,7 @@
 inclusion: auto
 ---
 
-# JEPO API v1.2.0 — Referencia Rápida
+# JEPO API v1.3.0 — Referencia Rápida
 
 Sistema de Asistencia Proactiva a Personas.
 
@@ -471,6 +471,7 @@ Los envíos a WhatsApp son asíncronos: `notificaciones` puede ser `null` en la 
 |--------|------|-------------|
 | POST | `/api/usuarios` | Crear usuario |
 | GET | `/api/usuarios` | Listar usuarios |
+| PATCH | `/api/usuarios/me/ubicacion` | Actualizar ubicación del usuario autenticado |
 | GET | `/api/usuarios/{id}` | Obtener usuario por ID |
 | PATCH | `/api/usuarios/{id}` | Actualizar usuario |
 | DELETE | `/api/usuarios/{id}` | Eliminar usuario |
@@ -490,6 +491,37 @@ Reglas de unicidad al crear/actualizar: `cedula`, `email` y `telefono`.
   "telefono": "+584121112233",
   "password": "Passw0rd!Segura",
   "token_fcm": "fcm_device_token_abc123456789"
+}
+```
+
+### PATCH /api/usuarios/me/ubicacion
+
+Actualiza la última ubicación conocida del usuario autenticado. Flutter debe consumir este endpoint cada ~15 minutos en segundo plano.
+
+**Body:**
+```json
+{
+  "latitud": 10.50234567,
+  "longitud": -66.91234567
+}
+```
+
+- `latitud`: -90 a 90 (decimal, hasta 8 decimales).
+- `longitud`: -180 a 180 (decimal, hasta 8 decimales).
+
+**Respuesta 200:**
+```json
+{
+  "success": true,
+  "message": "Ubicacion actualizada",
+  "data": {
+    "id": 1,
+    "nombre": "Maria",
+    "apellido": "Perez",
+    "ultima_latitud": 10.50234567,
+    "ultima_longitud": -66.91234567,
+    "fecha_ultima_ubicacion": "2026-05-13T14:30:00.000Z"
+  }
 }
 ```
 
@@ -515,6 +547,62 @@ Al enviar `password` se actualiza `password_changed_at` en el servidor y **todos
 ```json
 { "token_fcm": "fcm_device_token_abc123456789" }
 ```
+
+---
+
+## Mapa Familiar
+
+Basado en Teoría de Grafos: si el Usuario A te tiene como contacto de emergencia `VERIFIED`, tú puedes ver la ubicación del Usuario A. No hay roles rígidos; el permiso de monitoreo se deriva de la relación de contactos.
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| GET | `/api/mapa/monitoreados` | Listar usuarios que puedo monitorear (grafo inverso) |
+
+### GET /api/mapa/monitoreados
+
+Retorna la lista de usuarios que tienen al usuario autenticado como contacto de emergencia `VERIFIED`. Incluye su última ubicación conocida y un flag de alerta activa.
+
+**Respuesta 200:**
+```json
+{
+  "success": true,
+  "message": "Usuarios monitoreados obtenidos",
+  "data": [
+    {
+      "id": 5,
+      "nombre": "Maria",
+      "apellido": "Perez",
+      "telefono": "+584121112233",
+      "ultima_latitud": 10.50234567,
+      "ultima_longitud": -66.91234567,
+      "fecha_ultima_ubicacion": "2026-05-13T14:30:00.000Z",
+      "tiene_alerta_activa": true,
+      "prioridad_en_su_lista": 1
+    },
+    {
+      "id": 8,
+      "nombre": "Carlos",
+      "apellido": "Gomez",
+      "telefono": "+584141234567",
+      "ultima_latitud": 10.48000000,
+      "ultima_longitud": -66.88000000,
+      "fecha_ultima_ubicacion": "2026-05-13T14:15:00.000Z",
+      "tiene_alerta_activa": false,
+      "prioridad_en_su_lista": 2
+    }
+  ]
+}
+```
+
+**Campos:**
+- `ultima_latitud` / `ultima_longitud`: última posición reportada por ese usuario (puede ser `null` si nunca actualizó).
+- `fecha_ultima_ubicacion`: timestamp de la última actualización de ubicación (puede ser `null`).
+- `tiene_alerta_activa`: `true` si el usuario tiene una alerta de incidente en los últimos 30 minutos.
+- `prioridad_en_su_lista`: la prioridad que tú tienes como contacto en la lista de esa persona (1 = más prioritario).
+
+**Ordenamiento:** alertas activas primero, luego por prioridad ASC, luego por nombre ASC.
+
+**Nota:** si `ultima_latitud` o `ultima_longitud` son `null`, el usuario nunca ha reportado ubicación. El frontend debe mostrar un estado "sin ubicación" en el mapa.
 
 ---
 
@@ -562,6 +650,7 @@ Throttler global a partir de `THROTTLE_LIMIT` / `THROTTLE_TTL` del `.env` (por d
 - **LoginDto**: `email`, `password`
 - **ForgotPasswordDto**: `email_or_phone`, `method` (`"email" | "whatsapp"`)
 - **ResetPasswordDto**: `email_or_phone`, `otp` (6 dígitos), `new_password`
+- **UpdateLocationDto**: `latitud` (-90 a 90), `longitud` (-180 a 180)
 - **CreateEmergencyContactDto**: `nombre_contacto`, `telefono_contacto`, `prioridad?` (opcional, 1-5; si no se envía se auto-asigna al final)
 - **UpdateEmergencyContactDto**: `nombre_contacto?`, `telefono_contacto?`, `prioridad?`
 - **ReorderContactsDto**: `orden` (array de `{ id, prioridad }`)
@@ -579,3 +668,6 @@ Throttler global a partir de `THROTTLE_LIMIT` / `THROTTLE_TTL` del `.env` (por d
 - **Alertas**: si `contactosNotificar` viene vacío, avisar al usuario que no tiene contactos verificados (los PENDING no reciben la alerta).
 - **Drag & Drop de contactos**: al soltar, enviar `PATCH /api/usuarios/contactos/reordenar` con el array `orden` donde `prioridad = index + 1`. La respuesta devuelve la lista completa ya reordenada para sincronizar el estado local. No es necesario enviar `prioridad` al crear un contacto nuevo; siempre cae al final de la lista automáticamente.
 - **Crear contacto sin prioridad**: el frontend puede omitir `prioridad` en el body de `POST /api/usuarios/contactos`. El backend lo coloca al final. Tras crear, hacer un GET o usar la data del response para actualizar la lista local.
+- **Ubicación en background**: Flutter debe llamar `PATCH /api/usuarios/me/ubicacion` cada ~15 minutos con la posición GPS actual. Esto alimenta el Mapa Familiar para que los contactos puedan ver la última posición conocida.
+- **Mapa Familiar**: consumir `GET /api/mapa/monitoreados` para obtener la lista de personas que puedes monitorear. Si `ultima_latitud`/`ultima_longitud` son `null`, mostrar un estado "sin ubicación" en el mapa. Si `tiene_alerta_activa` es `true`, destacar visualmente a esa persona (ej. marcador rojo, animación de pulso).
+- **Lógica del grafo**: no necesitas gestionar permisos manualmente. Si alguien te tiene como contacto verificado, automáticamente aparece en tu lista de monitoreados. Si te elimina o cambia su teléfono (vuelve a PENDING), desaparece del mapa.
