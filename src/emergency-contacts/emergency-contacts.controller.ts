@@ -26,6 +26,7 @@ import { Throttle } from '@nestjs/throttler';
 import { Request } from 'express';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CreateEmergencyContactDto } from './dto/create-emergency-contact.dto';
+import { ReorderContactsDto } from './dto/reorder-contacts.dto';
 import { UpdateEmergencyContactDto } from './dto/update-emergency-contact.dto';
 import { VerifyEmergencyContactDto } from './dto/verify-emergency-contact.dto';
 import { EmergencyContactsService } from './emergency-contacts.service';
@@ -79,6 +80,36 @@ export class EmergencyContactsController {
       request.user.sub,
     );
     return { message: 'Contactos obtenidos', data: contacts };
+  }
+
+  @ApiOperation({
+    summary:
+      'Reordenar contactos de emergencia (bulk update de prioridades tras Drag & Drop)',
+  })
+  @ApiOkResponse({
+    description: 'Contactos reordenados',
+    schema: {
+      example: {
+        success: true,
+        message: 'Contactos reordenados',
+        data: [
+          { id: 10, prioridad: 1 },
+          { id: 15, prioridad: 2 },
+        ],
+      },
+    },
+  })
+  @Patch('reordenar')
+  @ApiBody({ type: ReorderContactsDto })
+  async reorder(
+    @Req() request: RequestWithUser,
+    @Body() dto: ReorderContactsDto,
+  ) {
+    const contacts = await this.emergencyContactsService.reorder(
+      request.user.sub,
+      dto.orden,
+    );
+    return { message: 'Contactos reordenados', data: contacts };
   }
 
   @ApiOperation({ summary: 'Obtener contacto de emergencia por ID' })

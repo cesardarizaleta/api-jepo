@@ -1,12 +1,13 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 import { EvolutionService } from '../common/evolution/evolution.service';
 import {
   VerificationChannel,
@@ -16,6 +17,7 @@ import {
 import { VerificationService } from '../common/verification/verification.service';
 import { User } from '../users/entities/user.entity';
 import { CreateEmergencyContactDto } from './dto/create-emergency-contact.dto';
+import { ReorderItemDto } from './dto/reorder-contacts.dto';
 import { UpdateEmergencyContactDto } from './dto/update-emergency-contact.dto';
 import { EmergencyContactVerificationStatus } from './emergency-contact.enums';
 import { EmergencyContact } from './entities/emergency-contact.entity';
@@ -41,6 +43,7 @@ export class EmergencyContactsService {
     private readonly usersRepository: Repository<User>,
     private readonly verificationService: VerificationService,
     private readonly evolutionService: EvolutionService,
+    private readonly dataSource: DataSource,
   ) {}
 
   async create(
@@ -55,8 +58,21 @@ export class EmergencyContactsService {
       createContactDto.telefono_contacto,
     );
 
+    // Auto-asignar prioridad si no se envía: MAX(prioridad) + 1
+    let prioridad = createContactDto.prioridad;
+    if (prioridad === undefined || prioridad === null) {
+      const result = await this.contactsRepository
+        .createQueryBuilder('c')
+        .select('COALESCE(MAX(c.prioridad), 0)', 'maxPrioridad')
+        .where('c.cedula_usuario = :cedula', { cedula: user.cedula })
+        .andWhere('c.deleted_at IS NULL')
+        .getRawOne<{ maxPrioridad: number }>();
+      prioridad = (Number(result?.maxPrioridad) || 0) + 1;
+    }
+
     const contact = this.contactsRepository.create({
       ...createContactDto,
+      prioridad,
       id_usuario: user.cedula,
       estado_verificacion: EmergencyContactVerificationStatus.PENDING,
       accepted_at: null,
@@ -178,6 +194,47 @@ export class EmergencyContactsService {
     const user = await this.ensureUserExists(idUsuario);
     await this.findOneByUser(idUsuario, id);
     await this.contactsRepository.softDelete({ id, id_usuario: user.cedula });
+  }
+
+  /**
+   * Reordena masivamente los contactos del usuario.
+   * Valida que todos los IDs pertenezcan al usuario autenticado.
+   * Ejecuta en transacción para consistencia.
+   */
+  async reorder(
+    idUsuario: number,
+    items: ReorderItemDto[],
+  ): Promise<EmergencyContact[]> {
+    const user = await this.ensureUserExists(idUsuario);
+    const ids = items.map((item) => item.id);
+
+    // Verificar que todos los IDs pertenecen al usuario
+    const contacts = await this.contactsRepository.find({
+      where: { id: In(ids), id_usuario: user.cedula },
+    });
+
+    if (contacts.length !== ids.length) {
+      const foundIds = new Set(contacts.map((c) => c.id));
+      const invalidIds = ids.filter((id) => !foundIds.has(id));
+      throw new ForbiddenException(
+        `Los siguientes contactos no pertenecen al usuario o no existen: [${invalidIds.join(', ')}]`,
+      );
+    }
+
+    // Ejecutar updates en transacción
+    await this.dataSource.transaction(async (manager) => {
+      const repo = manager.getRepository(EmergencyContact);
+      const updates = items.map((item) =>
+        repo.update(
+          { id: item.id, id_usuario: user.cedula },
+          { prioridad: item.prioridad },
+        ),
+      );
+      await Promise.all(updates);
+    });
+
+    // Retornar la lista actualizada y ordenada
+    return this.findAllByUser(idUsuario);
   }
 
   private async issueAndSendOtp(
