@@ -87,7 +87,7 @@ export class MailerService implements OnModuleInit, OnModuleDestroy {
   }
 
   async sendPasswordResetOtp(to: string, otp: string): Promise<MailSendResult> {
-    const subject = `${this.appName} - Codigo de recuperacion de contrasena`;
+    const subject = `${this.appName} - Codigo de recuperacion de contraseña`;
     const text = [
       `Tu codigo de verificacion de ${this.appName} es: ${otp}`,
       '',
@@ -107,7 +107,7 @@ export class MailerService implements OnModuleInit, OnModuleDestroy {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>${appName} - Recuperacion de contrasena</title>
+    <title>${appName} - Recuperacion de contraseña</title>
   </head>
   <body style="margin:0;padding:0;background-color:#f4f6fb;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1f2937;">
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#f4f6fb;padding:32px 16px;">
@@ -122,7 +122,7 @@ export class MailerService implements OnModuleInit, OnModuleDestroy {
             </tr>
             <tr>
               <td style="padding:32px;">
-                <h1 style="margin:0 0 12px 0;font-size:20px;color:#0f172a;">Recuperacion de contrasena</h1>
+                <h1 style="margin:0 0 12px 0;font-size:20px;color:#0f172a;">Recuperacion de contraseña</h1>
                 <p style="margin:0 0 16px 0;font-size:14px;line-height:1.6;color:#374151;">
                   Recibimos una solicitud para restablecer la contrasena de tu cuenta en ${appName}.
                   Usa el siguiente codigo de verificacion para continuar. Este codigo

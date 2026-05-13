@@ -128,7 +128,7 @@ export class AuthService {
         );
       } else {
         const text = [
-          '🔐 *JEPO - Recuperacion de contrasena*',
+          '🔐 *JEPO - Recuperacion de contraseña*',
           '',
           `Tu codigo de verificacion es: *${plainCode}*`,
           'Expira en 15 minutos.',
