@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Req, UseGuards, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -9,13 +18,16 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { Request } from 'express';
+import { Throttle } from '@nestjs/throttler';
+import type { Request } from 'express';
 import { Public } from '../common/decorators/public.decorator';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { UsersService } from '../users/users.service';
 import { AuthService } from './auth.service';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 
 type RequestWithUser = Request & {
   user: {
@@ -35,106 +47,77 @@ export class AuthController {
 
   @Public()
   @ApiOperation({ summary: 'Registrar usuario y generar token JWT' })
-  @ApiCreatedResponse({
-    description: 'Registro exitoso',
-    schema: {
-      example: {
-        success: true,
-        message: 'Registro exitoso',
-        data: {
-          access_token: '<jwt_token>',
-          user: {
-            id: 1,
-            cedula: 12123456,
-            nombre: 'Maria',
-            apellido: 'Perez',
-            email: 'maria.perez@jepo.com',
-            telefono: '+584121112233',
-            token_fcm: 'fcm_token_ABC123XYZ',
-          },
-        },
-      },
-    },
-  })
+  @ApiCreatedResponse({ description: 'Registro exitoso' })
   @Post('register')
   @ApiBody({ type: RegisterDto })
-  @ApiOkResponse({ description: 'Registro exitoso' })
   async register(@Body() registerDto: RegisterDto) {
     const result = await this.authService.register(registerDto);
-    return {
-      message: 'Registro exitoso',
-      data: result,
-    };
+    return { message: 'Registro exitoso', data: result };
   }
 
   @Public()
   @ApiOperation({ summary: 'Iniciar sesion y obtener token JWT' })
+  @ApiOkResponse({ description: 'Login exitoso' })
+  @ApiUnauthorizedResponse({ description: 'Credenciales invalidas' })
+  @Post('login')
+  @ApiBody({ type: LoginDto })
+  async login(@Body() loginDto: LoginDto) {
+    const result = await this.authService.login(loginDto);
+    return { message: 'Login exitoso', data: result };
+  }
+
+  @Public()
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Solicitar codigo OTP para recuperar contrasena',
+  })
   @ApiOkResponse({
-    description: 'Login exitoso',
+    description: 'Respuesta generica (anti-enumeracion)',
     schema: {
       example: {
         success: true,
-        message: 'Login exitoso',
-        data: {
-          access_token: '<jwt_token>',
-          user: {
-            id: 1,
-            cedula: 12123456,
-            nombre: 'Maria',
-            apellido: 'Perez',
-            email: 'maria.perez@jepo.com',
-            telefono: '+584121112233',
-            token_fcm: 'fcm_token_ABC123XYZ',
-          },
-        },
+        message: 'Si la cuenta existe, recibiras un codigo de verificacion',
+        data: null,
       },
     },
   })
-  @Post('login')
-  @ApiBody({ type: LoginDto })
-  @ApiOkResponse({ description: 'Login exitoso' })
-  @ApiUnauthorizedResponse({ description: 'Credenciales invalidas' })
-  async login(@Body() loginDto: LoginDto) {
-    const result = await this.authService.login(loginDto);
-    return {
-      message: 'Login exitoso',
-      data: result,
-    };
+  @Post('forgot-password')
+  @ApiBody({ type: ForgotPasswordDto })
+  async forgotPassword(
+    @Body() dto: ForgotPasswordDto,
+    @Req() request: Request,
+  ) {
+    const result = await this.authService.forgotPassword(dto, {
+      ip: request.ip ?? null,
+      userAgent: request.headers['user-agent'] ?? null,
+    });
+    return { message: result.message, data: null };
+  }
+
+  @Public()
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Resetear contrasena validando el codigo OTP' })
+  @ApiOkResponse({ description: 'Contrasena actualizada' })
+  @ApiUnauthorizedResponse({ description: 'Codigo invalido o expirado' })
+  @Post('reset-password')
+  @ApiBody({ type: ResetPasswordDto })
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    const result = await this.authService.resetPassword(dto);
+    return { message: result.message, data: null };
   }
 
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Obtener datos del usuario autenticado' })
-  @ApiOkResponse({
-    description: 'Sesion valida',
-    schema: {
-      example: {
-        success: true,
-        message: 'Sesion valida',
-        data: {
-          id: 1,
-          cedula: 12123456,
-          nombre: 'Maria',
-          apellido: 'Perez',
-          email: 'maria.perez@jepo.com',
-          telefono: '+584121112233',
-          token_fcm: 'fcm_token_ABC123XYZ',
-        },
-      },
-    },
-  })
-  @Get('me')
   @ApiBearerAuth('bearer')
-  @ApiOperation({ summary: 'Obtener sesion actual' })
+  @ApiOperation({ summary: 'Obtener datos del usuario autenticado' })
   @ApiOkResponse({ description: 'Sesion valida' })
   @ApiUnauthorizedResponse({
     description: 'Token ausente, invalido o expirado',
   })
+  @Get('me')
   async me(@Req() request: RequestWithUser) {
     const user = await this.usersService.findOne(request.user.sub);
-    return {
-      message: 'Sesion valida',
-      data: user,
-    };
+    return { message: 'Sesion valida', data: user };
   }
 }

@@ -35,11 +35,18 @@ export class User {
   @Column({ type: 'varchar', length: 120, unique: true })
   email: string;
 
-  @Column({ type: 'varchar', length: 30 })
+  @Column({ type: 'varchar', length: 30, unique: true })
   telefono: string;
 
   @Column({ type: 'varchar', length: 255, select: false, nullable: true })
   password_hash: string | null;
+
+  @Column({
+    name: 'password_changed_at',
+    type: 'timestamptz',
+    nullable: true,
+  })
+  password_changed_at: Date | null;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   token_fcm: string | null;

@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EmergencyContact } from '../emergency-contacts/entities/emergency-contact.entity';
+import { EmergencyContactVerificationStatus } from '../emergency-contacts/emergency-contact.enums';
 import { User } from '../users/entities/user.entity';
 import { CreateIncidentAlertDto } from './dto/create-incident-alert.dto';
 import { UpdateIncidentAlertDto } from './dto/update-incident-alert.dto';
@@ -58,7 +59,10 @@ export class IncidentAlertsService {
 
     if (savedAlert.es_proactiva) {
       contactosNotificar = await this.contactsRepository.find({
-        where: { id_usuario: savedAlert.id_usuario },
+        where: {
+          id_usuario: savedAlert.id_usuario,
+          estado_verificacion: EmergencyContactVerificationStatus.VERIFIED,
+        },
         order: { prioridad: 'ASC', id: 'ASC' },
       });
 

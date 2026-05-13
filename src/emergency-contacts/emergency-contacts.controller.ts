@@ -3,6 +3,8 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseIntPipe,
   Patch,
@@ -20,10 +22,12 @@ import {
   ApiSecurity,
   ApiTags,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { Request } from 'express';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CreateEmergencyContactDto } from './dto/create-emergency-contact.dto';
 import { UpdateEmergencyContactDto } from './dto/update-emergency-contact.dto';
+import { VerifyEmergencyContactDto } from './dto/verify-emergency-contact.dto';
 import { EmergencyContactsService } from './emergency-contacts.service';
 
 type RequestWithUser = Request & {
@@ -44,27 +48,12 @@ export class EmergencyContactsController {
   ) {}
 
   @ApiOperation({
-    summary: 'Crear contacto de emergencia del usuario autenticado',
+    summary:
+      'Crear contacto de emergencia (PENDING + envia OTP al contacto por WhatsApp)',
   })
-  @ApiCreatedResponse({
-    description: 'Contacto de emergencia creado',
-    schema: {
-      example: {
-        success: true,
-        message: 'Contacto de emergencia creado',
-        data: {
-          id: 10,
-          id_usuario: 1,
-          nombre_contacto: 'Juan Lopez',
-          telefono_contacto: '+584141234567',
-          prioridad: 1,
-        },
-      },
-    },
-  })
+  @ApiCreatedResponse({ description: 'Contacto creado en estado PENDING' })
   @Post()
   @ApiBody({ type: CreateEmergencyContactDto })
-  @ApiOkResponse({ description: 'Contacto de emergencia creado' })
   async create(
     @Req() request: RequestWithUser,
     @Body() createContactDto: CreateEmergencyContactDto,
@@ -72,6 +61,10 @@ export class EmergencyContactsController {
     const contact = await this.emergencyContactsService.create(
       request.user.sub,
       createContactDto,
+      {
+        ip: request.ip ?? null,
+        userAgent: request.headers['user-agent'] ?? null,
+      },
     );
     return { message: 'Contacto de emergencia creado', data: contact };
   }
@@ -79,26 +72,8 @@ export class EmergencyContactsController {
   @ApiOperation({
     summary: 'Listar contactos de emergencia del usuario autenticado',
   })
-  @ApiOkResponse({
-    description: 'Contactos obtenidos',
-    schema: {
-      example: {
-        success: true,
-        message: 'Contactos obtenidos',
-        data: [
-          {
-            id: 10,
-            id_usuario: 1,
-            nombre_contacto: 'Juan Lopez',
-            telefono_contacto: '+584141234567',
-            prioridad: 1,
-          },
-        ],
-      },
-    },
-  })
-  @Get()
   @ApiOkResponse({ description: 'Contactos obtenidos' })
+  @Get()
   async findAll(@Req() request: RequestWithUser) {
     const contacts = await this.emergencyContactsService.findAllByUser(
       request.user.sub,
@@ -108,26 +83,8 @@ export class EmergencyContactsController {
 
   @ApiOperation({ summary: 'Obtener contacto de emergencia por ID' })
   @ApiParam({ name: 'id', type: Number, example: 10 })
-  @ApiOkResponse({
-    description: 'Contacto obtenido',
-    schema: {
-      example: {
-        success: true,
-        message: 'Contacto obtenido',
-        data: {
-          id: 10,
-          id_usuario: 1,
-          nombre_contacto: 'Juan Lopez',
-          telefono_contacto: '+584141234567',
-          prioridad: 1,
-        },
-      },
-    },
-  })
-  @Get(':id')
-  @ApiOperation({ summary: 'Obtener contacto de emergencia por ID' })
-  @ApiParam({ name: 'id', type: Number, example: 1 })
   @ApiOkResponse({ description: 'Contacto obtenido' })
+  @Get(':id')
   async findOne(
     @Req() request: RequestWithUser,
     @Param('id', ParseIntPipe) id: number,
@@ -141,26 +98,9 @@ export class EmergencyContactsController {
 
   @ApiOperation({ summary: 'Actualizar contacto de emergencia por ID' })
   @ApiParam({ name: 'id', type: Number, example: 10 })
-  @ApiOkResponse({
-    description: 'Contacto actualizado',
-    schema: {
-      example: {
-        success: true,
-        message: 'Contacto actualizado',
-        data: {
-          id: 10,
-          id_usuario: 1,
-          nombre_contacto: 'Carlos Romero',
-          telefono_contacto: '+584121998877',
-          prioridad: 2,
-        },
-      },
-    },
-  })
-  @Patch(':id')
-  @ApiParam({ name: 'id', type: Number, example: 1 })
-  @ApiBody({ type: UpdateEmergencyContactDto })
   @ApiOkResponse({ description: 'Contacto actualizado' })
+  @Patch(':id')
+  @ApiBody({ type: UpdateEmergencyContactDto })
   async update(
     @Req() request: RequestWithUser,
     @Param('id', ParseIntPipe) id: number,
@@ -176,27 +116,58 @@ export class EmergencyContactsController {
 
   @ApiOperation({ summary: 'Eliminar contacto de emergencia por ID' })
   @ApiParam({ name: 'id', type: Number, example: 10 })
-  @ApiOkResponse({
-    description: 'Contacto eliminado',
-    schema: {
-      example: {
-        success: true,
-        message: 'Contacto eliminado',
-        data: null,
-      },
-    },
-  })
-  @Delete(':id')
-  @ApiOperation({
-    summary: 'Eliminar contacto de emergencia por ID (soft delete)',
-  })
-  @ApiParam({ name: 'id', type: Number, example: 1 })
   @ApiOkResponse({ description: 'Contacto eliminado' })
+  @Delete(':id')
   async remove(
     @Req() request: RequestWithUser,
     @Param('id', ParseIntPipe) id: number,
   ) {
     await this.emergencyContactsService.remove(request.user.sub, id);
     return { message: 'Contacto eliminado', data: null };
+  }
+
+  @ApiOperation({
+    summary: 'Verificar contacto de emergencia usando el OTP',
+  })
+  @ApiParam({ name: 'id', type: Number, example: 10 })
+  @ApiOkResponse({ description: 'Contacto verificado' })
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @HttpCode(HttpStatus.OK)
+  @Post(':id/verificar')
+  @ApiBody({ type: VerifyEmergencyContactDto })
+  async verify(
+    @Req() request: RequestWithUser,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: VerifyEmergencyContactDto,
+  ) {
+    const contact = await this.emergencyContactsService.verify(
+      request.user.sub,
+      id,
+      dto.codigo,
+    );
+    return { message: 'Contacto verificado', data: contact };
+  }
+
+  @ApiOperation({
+    summary: 'Reenviar codigo OTP al contacto de emergencia (cooldown 60s)',
+  })
+  @ApiParam({ name: 'id', type: Number, example: 10 })
+  @ApiOkResponse({ description: 'Codigo reenviado' })
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @HttpCode(HttpStatus.OK)
+  @Post(':id/reenviar-codigo')
+  async resend(
+    @Req() request: RequestWithUser,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    const result = await this.emergencyContactsService.resendVerification(
+      request.user.sub,
+      id,
+      {
+        ip: request.ip ?? null,
+        userAgent: request.headers['user-agent'] ?? null,
+      },
+    );
+    return { message: result.message, data: null };
   }
 }

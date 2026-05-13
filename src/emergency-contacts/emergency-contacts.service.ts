@@ -2,29 +2,51 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { EvolutionService } from '../common/evolution/evolution.service';
+import {
+  VerificationChannel,
+  VerificationPurpose,
+  VerificationSubjectType,
+} from '../common/verification/verification.enums';
+import { VerificationService } from '../common/verification/verification.service';
 import { User } from '../users/entities/user.entity';
 import { CreateEmergencyContactDto } from './dto/create-emergency-contact.dto';
 import { UpdateEmergencyContactDto } from './dto/update-emergency-contact.dto';
+import { EmergencyContactVerificationStatus } from './emergency-contact.enums';
 import { EmergencyContact } from './entities/emergency-contact.entity';
+
+export type VerificationContext = {
+  ip?: string | null;
+  userAgent?: string | null;
+};
 
 @Injectable()
 export class EmergencyContactsService {
+  private readonly logger = new Logger(EmergencyContactsService.name);
   private static readonly MAX_CONTACTS = 5;
+  private static readonly OTP_TTL_MINUTES = 15;
+  private static readonly OTP_MAX_ATTEMPTS = 3;
+  private static readonly OTP_COOLDOWN_SECONDS = 60;
+  private static readonly OTP_MAX_RESENDS = 3;
 
   constructor(
     @InjectRepository(EmergencyContact)
     private readonly contactsRepository: Repository<EmergencyContact>,
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
+    private readonly verificationService: VerificationService,
+    private readonly evolutionService: EvolutionService,
   ) {}
 
   async create(
     idUsuario: number,
     createContactDto: CreateEmergencyContactDto,
+    context: VerificationContext = {},
   ): Promise<EmergencyContact> {
     const user = await this.ensureUserExists(idUsuario);
     await this.ensureMaxContactsRule(user.cedula);
@@ -36,8 +58,65 @@ export class EmergencyContactsService {
     const contact = this.contactsRepository.create({
       ...createContactDto,
       id_usuario: user.cedula,
+      estado_verificacion: EmergencyContactVerificationStatus.PENDING,
+      accepted_at: null,
     });
 
+    const saved = await this.contactsRepository.save(contact);
+
+    // Emitir OTP y notificar al contacto (en background, no bloquear).
+    void this.issueAndSendOtp(user, saved, context).catch((err) => {
+      this.logger.error(
+        `Fallo enviando OTP de verificacion al contacto ${saved.id}`,
+        err as Error,
+      );
+    });
+
+    return saved;
+  }
+
+  async resendVerification(
+    idUsuario: number,
+    contactId: number,
+    context: VerificationContext = {},
+  ): Promise<{ message: string }> {
+    const user = await this.ensureUserExists(idUsuario);
+    const contact = await this.findOneByUser(idUsuario, contactId);
+
+    if (
+      contact.estado_verificacion ===
+      EmergencyContactVerificationStatus.VERIFIED
+    ) {
+      throw new BadRequestException('El contacto ya esta verificado');
+    }
+
+    await this.issueAndSendOtp(user, contact, context);
+    return { message: 'Codigo de verificacion reenviado' };
+  }
+
+  async verify(
+    idUsuario: number,
+    contactId: number,
+    codigo: string,
+  ): Promise<EmergencyContact> {
+    const contact = await this.findOneByUser(idUsuario, contactId);
+
+    if (
+      contact.estado_verificacion ===
+      EmergencyContactVerificationStatus.VERIFIED
+    ) {
+      throw new BadRequestException('El contacto ya esta verificado');
+    }
+
+    await this.verificationService.consumeCode({
+      purpose: VerificationPurpose.CONTACT_VERIFICATION,
+      subjectType: VerificationSubjectType.EMERGENCY_CONTACT,
+      subjectId: contact.id,
+      plainCode: codigo,
+    });
+
+    contact.estado_verificacion = EmergencyContactVerificationStatus.VERIFIED;
+    contact.accepted_at = new Date();
     return this.contactsRepository.save(contact);
   }
 
@@ -72,17 +151,26 @@ export class EmergencyContactsService {
   ): Promise<EmergencyContact> {
     const contact = await this.findOneByUser(idUsuario, id);
 
+    let phoneChanged = false;
     if (
       updateContactDto.telefono_contacto &&
       updateContactDto.telefono_contacto !== contact.telefono_contacto
     ) {
       await this.ensureUniquePhone(
-        idUsuario,
+        contact.id_usuario,
         updateContactDto.telefono_contacto,
       );
+      phoneChanged = true;
     }
 
     const merged = this.contactsRepository.merge(contact, updateContactDto);
+
+    // Si cambió el teléfono, invalidar verificación previa.
+    if (phoneChanged) {
+      merged.estado_verificacion = EmergencyContactVerificationStatus.PENDING;
+      merged.accepted_at = null;
+    }
+
     return this.contactsRepository.save(merged);
   }
 
@@ -90,6 +178,48 @@ export class EmergencyContactsService {
     const user = await this.ensureUserExists(idUsuario);
     await this.findOneByUser(idUsuario, id);
     await this.contactsRepository.softDelete({ id, id_usuario: user.cedula });
+  }
+
+  private async issueAndSendOtp(
+    user: User,
+    contact: EmergencyContact,
+    context: VerificationContext,
+  ): Promise<void> {
+    const { plainCode } = await this.verificationService.issueCode({
+      purpose: VerificationPurpose.CONTACT_VERIFICATION,
+      subjectType: VerificationSubjectType.EMERGENCY_CONTACT,
+      subjectId: contact.id,
+      channel: VerificationChannel.WHATSAPP,
+      deliveryTarget: contact.telefono_contacto,
+      ttlMinutes: EmergencyContactsService.OTP_TTL_MINUTES,
+      maxAttempts: EmergencyContactsService.OTP_MAX_ATTEMPTS,
+      resendCooldownSeconds: EmergencyContactsService.OTP_COOLDOWN_SECONDS,
+      maxActiveResends: EmergencyContactsService.OTP_MAX_RESENDS,
+      context,
+    });
+
+    const userFullName = `${user.nombre} ${user.apellido}`.trim();
+    const text = [
+      '🛡️ *JEPO - Confirmacion de contacto de emergencia*',
+      '',
+      `*${userFullName}* te ha seleccionado como contacto de emergencia.`,
+      'Si aceptas, comparte con esa persona el siguiente codigo para confirmar:',
+      '',
+      `🔑 Codigo: *${plainCode}*`,
+      `Expira en ${EmergencyContactsService.OTP_TTL_MINUTES} minutos.`,
+      '',
+      'Si no deseas ser su contacto de emergencia, ignora este mensaje.',
+    ].join('\n');
+
+    const result = await this.evolutionService.sendText(
+      contact.telefono_contacto,
+      text,
+    );
+    if (!result.success) {
+      this.logger.warn(
+        `No se pudo entregar OTP de verificacion al contacto ${contact.id}: ${result.error}`,
+      );
+    }
   }
 
   private async ensureUserExists(idUsuario: number): Promise<User> {
@@ -108,7 +238,7 @@ export class EmergencyContactsService {
     });
     if (totalContacts >= EmergencyContactsService.MAX_CONTACTS) {
       throw new BadRequestException(
-        'El usuario ya tiene el maximo de 5 contactos de emergencia',
+        `El usuario ya tiene el maximo de ${EmergencyContactsService.MAX_CONTACTS} contactos de emergencia`,
       );
     }
   }

@@ -10,6 +10,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
+import { EmergencyContactVerificationStatus } from '../emergency-contact.enums';
 
 @Entity({ schema: 'asistencia_proactiva', name: 'contactos_emergencia' })
 export class EmergencyContact {
@@ -40,6 +41,17 @@ export class EmergencyContact {
 
   @Column({ type: 'int' })
   prioridad: number;
+
+  @Column({
+    name: 'estado_verificacion',
+    type: 'varchar',
+    length: 20,
+    default: EmergencyContactVerificationStatus.PENDING,
+  })
+  estado_verificacion: EmergencyContactVerificationStatus;
+
+  @Column({ name: 'accepted_at', type: 'timestamptz', nullable: true })
+  accepted_at: Date | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
