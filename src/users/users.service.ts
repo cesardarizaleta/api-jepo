@@ -111,6 +111,23 @@ export class UsersService {
     return this.usersRepository.save(user);
   }
 
+  async updateLocation(
+    id: number,
+    latitud: number,
+    longitud: number,
+  ): Promise<SafeUser> {
+    await this.findOne(id);
+    await this.usersRepository.update(
+      { id },
+      {
+        ultima_latitud: latitud,
+        ultima_longitud: longitud,
+        fecha_ultima_ubicacion: new Date(),
+      },
+    );
+    return this.findOne(id);
+  }
+
   async remove(id: number): Promise<void> {
     await this.findOne(id);
     await this.usersRepository.softDelete(id);

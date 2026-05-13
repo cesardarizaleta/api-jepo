@@ -9,6 +9,7 @@ import { ApiKeyGuard } from './common/guards/api-key.guard';
 import { UsersModule } from './users/users.module';
 import { UsersApiModule } from './users/users-api.module';
 import { EmergencyContactsModule } from './emergency-contacts/emergency-contacts.module';
+import { FamilyMapModule } from './family-map/family-map.module';
 import { IncidentAlertsModule } from './incident-alerts/incident-alerts.module';
 import { SecurityModule } from './common/security/security.module';
 import { EvolutionModule } from './common/evolution/evolution.module';
@@ -60,6 +61,7 @@ import { HealthModule } from './setup/health/health.module';
     AuthModule,
     HealthModule,
     EmergencyContactsModule,
+    FamilyMapModule,
     IncidentAlertsModule,
     UsersModule,
     UsersApiModule,
