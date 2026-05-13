@@ -7,6 +7,9 @@
   "license": "UNLICENSED",
   "scripts": {
     "dev": "nodemon --watch src --ext ts --exec \"ts-node -r tsconfig-paths/register src/main.ts\"",
+    "typeorm": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli",
+    "migration:create": "npm run typeorm -- migration:create",
+    "migration:run": "npm run typeorm -- migration:run -d src/data-source.ts",
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
