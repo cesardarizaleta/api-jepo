@@ -1,4 +1,9 @@
-import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -68,8 +73,10 @@ export class AuthService {
   }
 
   /**
-   * Forgot password: responde genérico SIEMPRE (anti-enumeración).
-   * Dispara el envío del OTP en background; no bloquea la respuesta.
+   * Forgot password: responde genérico cuando el usuario no existe (anti-enumeración).
+   * Cuando el usuario sí existe, espera al envío real:
+   *  - éxito: 200 con mensaje genérico
+   *  - fallo de proveedor (Gmail/Evolution): 500 (no cuelga la petición)
    */
   async forgotPassword(
     dto: ForgotPasswordDto,
@@ -78,11 +85,73 @@ export class AuthService {
     const identifier = dto.email_or_phone.trim();
     const method = dto.method;
 
-    void this.processForgotPassword(identifier, method, context).catch(
-      (err) => {
-        this.logger.error('Error en forgot-password (background)', err);
-      },
-    );
+    const user = await this.findUserByEmailOrPhone(identifier);
+    if (!user) {
+      this.logger.debug(
+        'forgot-password: identidad no encontrada (respuesta silenciosa)',
+      );
+      return { message: AuthService.GENERIC_FORGOT_MESSAGE };
+    }
+
+    const channel =
+      method === 'whatsapp'
+        ? VerificationChannel.WHATSAPP
+        : VerificationChannel.EMAIL;
+    const deliveryTarget =
+      channel === VerificationChannel.EMAIL ? user.email : user.telefono;
+
+    if (!deliveryTarget) {
+      this.logger.warn(
+        `Usuario ${user.id} no tiene canal ${channel} configurado`,
+      );
+      return { message: AuthService.GENERIC_FORGOT_MESSAGE };
+    }
+
+    const { plainCode } = await this.verificationService.issueCode({
+      purpose: VerificationPurpose.PASSWORD_RESET,
+      subjectType: VerificationSubjectType.USER,
+      subjectId: user.id,
+      channel,
+      deliveryTarget,
+      ttlMinutes: 15,
+      maxAttempts: 3,
+      resendCooldownSeconds: 60,
+      maxActiveResends: 3,
+      context,
+    });
+
+    try {
+      if (channel === VerificationChannel.EMAIL) {
+        await this.mailerService.sendPasswordResetOtp(
+          deliveryTarget,
+          plainCode,
+        );
+      } else {
+        const text = [
+          '🔐 *JEPO - Recuperacion de contrasena*',
+          '',
+          `Tu codigo de verificacion es: *${plainCode}*`,
+          'Expira en 15 minutos.',
+          '',
+          'Si no solicitaste este cambio, ignora este mensaje.',
+        ].join('\n');
+        const result = await this.evolutionService.sendText(
+          deliveryTarget,
+          text,
+        );
+        if (!result.success) {
+          throw new Error(result.error ?? 'Fallo envio WhatsApp');
+        }
+      }
+    } catch (err) {
+      this.logger.error(
+        `forgot-password: fallo enviando OTP al usuario ${user.id}`,
+        err as Error,
+      );
+      throw new InternalServerErrorException(
+        'No fue posible entregar el codigo de verificacion. Intenta nuevamente en unos segundos.',
+      );
+    }
 
     return { message: AuthService.GENERIC_FORGOT_MESSAGE };
   }
@@ -111,72 +180,6 @@ export class AuthService {
     );
 
     return { message: 'Contrasena actualizada correctamente' };
-  }
-
-  private async processForgotPassword(
-    identifier: string,
-    method: 'email' | 'whatsapp',
-    context: AuthContext,
-  ): Promise<void> {
-    const user = await this.findUserByEmailOrPhone(identifier);
-    if (!user) {
-      this.logger.debug(
-        'forgot-password: identidad no encontrada (respuesta silenciosa)',
-      );
-      return;
-    }
-
-    const channel =
-      method === 'whatsapp'
-        ? VerificationChannel.WHATSAPP
-        : VerificationChannel.EMAIL;
-    const deliveryTarget =
-      channel === VerificationChannel.EMAIL ? user.email : user.telefono;
-
-    if (!deliveryTarget) {
-      this.logger.warn(
-        `Usuario ${user.id} no tiene canal ${channel} configurado`,
-      );
-      return;
-    }
-
-    try {
-      const { plainCode } = await this.verificationService.issueCode({
-        purpose: VerificationPurpose.PASSWORD_RESET,
-        subjectType: VerificationSubjectType.USER,
-        subjectId: user.id,
-        channel,
-        deliveryTarget,
-        ttlMinutes: 15,
-        maxAttempts: 3,
-        resendCooldownSeconds: 60,
-        maxActiveResends: 3,
-        context,
-      });
-
-      if (channel === VerificationChannel.EMAIL) {
-        await this.mailerService.sendMail({
-          to: deliveryTarget,
-          subject: 'Recuperacion de contrasena - JEPO',
-          text: `Tu codigo de verificacion es: ${plainCode}\nExpira en 15 minutos. Si no solicitaste este cambio, ignora este mensaje.`,
-        });
-      } else {
-        const text = [
-          '🔐 *JEPO - Recuperacion de contrasena*',
-          '',
-          `Tu codigo de verificacion es: *${plainCode}*`,
-          'Expira en 15 minutos.',
-          '',
-          'Si no solicitaste este cambio, ignora este mensaje.',
-        ].join('\n');
-        await this.evolutionService.sendText(deliveryTarget, text);
-      }
-    } catch (err) {
-      this.logger.error(
-        `forgot-password: fallo emitiendo/enviando OTP al usuario ${user.id}`,
-        err as Error,
-      );
-    }
   }
 
   private async findUserByEmailOrPhone(
