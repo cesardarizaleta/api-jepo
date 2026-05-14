@@ -1,11 +1,16 @@
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import * as express from 'express';
 import { AppModule } from './app.module';
 import { configureApp } from './setup/app.config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.enableShutdownHooks();
+
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
   configureApp(app);
 
   const swaggerConfig = new DocumentBuilder()
