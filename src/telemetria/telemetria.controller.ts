@@ -25,12 +25,19 @@ export class TelemetriaController {
   @ApiBody({ type: RecolectarTelemetriaDto })
   @ApiOkResponse({
     description: 'Muestras guardadas en dataset_jepo.csv',
+    schema: {
+      example: {
+        success: true,
+        message: 'Muestras registradas',
+        data: { muestras_escritas: 50 },
+      },
+    },
   })
-  async recolectar(@Body() payload: any) {
-    const result = await this.telemetriaService.recolectar(payload);
+  async recolectar(@Body() dto: RecolectarTelemetriaDto) {
+    const count = await this.telemetriaService.recolectar(dto);
     return {
       message: 'Muestras registradas',
-      data: result,
+      data: { muestras_escritas: count },
     };
   }
 }

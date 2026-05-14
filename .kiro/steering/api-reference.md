@@ -623,19 +623,24 @@ Recibe un lote de lecturas del acelerómetro con su etiqueta de actividad y las 
 {
   "etiqueta": "CAIDA",
   "muestras": [
-    { "x": 1.2, "y": 0.5, "z": 9.8, "timestamp": 1716000000000 },
-    { "x": 1.3, "y": 0.4, "z": 9.7, "timestamp": 1716000000050 }
+    { "t": 1778787715004, "ax": 0.12, "ay": -0.34, "az": 9.7, "gx": 0.01, "gy": 0.02, "gz": 0.0 },
+    { "t": 1778787715054, "ax": 0.15, "ay": -0.30, "az": 9.6, "gx": 0.02, "gy": 0.01, "gz": 0.0 }
   ]
 }
 ```
+
+**Campos de cada muestra:**
+- `t`: timestamp en milisegundos
+- `ax`, `ay`, `az`: acelerómetro (m/s²)
+- `gx`, `gy`, `gz`: giroscopio (rad/s)
 
 **Etiquetas válidas:** `CAIDA`, `CAMINAR`, `CORRER`, `QUIETO`, `SUBIR_ESCALERAS`, `BAJAR_ESCALERAS`.
 
 **Formato CSV generado (`dataset_jepo.csv`):**
 ```
-timestamp,x,y,z,etiqueta
-1716000000000,1.2,0.5,9.8,CAIDA
-1716000000050,1.3,0.4,9.7,CAIDA
+timestamp,ax,ay,az,gx,gy,gz,etiqueta
+1778787715004,0.12,-0.34,9.7,0.01,0.02,0.0,CAIDA
+1778787715054,0.15,-0.30,9.6,0.02,0.01,0.0,CAIDA
 ```
 
 **Respuesta 200:**
@@ -707,7 +712,7 @@ Throttler global a partir de `THROTTLE_LIMIT` / `THROTTLE_TTL` del `.env` (por d
 - **UpdateIncidentAlertDto**: todos opcionales
 - **UpdateUserDto**: todos opcionales (`password` dispara invalidación de JWT)
 - **UpdateTokenDto**: `token_fcm`
-- **RecolectarTelemetriaDto**: `etiqueta` (enum: CAIDA, CAMINAR, CORRER, QUIETO, SUBIR_ESCALERAS, BAJAR_ESCALERAS), `muestras` (array de `{ x, y, z, timestamp }`)
+- **RecolectarTelemetriaDto**: `etiqueta` (enum: CAIDA, CAMINAR, CORRER, QUIETO, SUBIR_ESCALERAS, BAJAR_ESCALERAS), `muestras` (array de `{ t, ax, ay, az, gx, gy, gz }`)
 
 ## Notas para el frontend
 
