@@ -606,6 +606,54 @@ Retorna la lista de usuarios que tienen al usuario autenticado como contacto de 
 
 ---
 
+## Telemetría (Data Logger — temporal para entrenamiento HAR)
+
+Endpoint temporal para recolectar datos de sensores del teléfono y generar el dataset de entrenamiento del modelo TinyML de Human Activity Recognition.
+
+| Método | Ruta | Descripción | Auth |
+|--------|------|-------------|------|
+| POST | `/api/telemetria/recolectar` | Guardar muestras de acelerómetro en CSV | Solo `x-api-key` |
+
+### POST /api/telemetria/recolectar
+
+Recibe un lote de lecturas del acelerómetro con su etiqueta de actividad y las agrega (append) al archivo `dataset_jepo.csv` en la raíz del proyecto.
+
+**Body:**
+```json
+{
+  "etiqueta": "CAIDA",
+  "muestras": [
+    { "x": 1.2, "y": 0.5, "z": 9.8, "timestamp": 1716000000000 },
+    { "x": 1.3, "y": 0.4, "z": 9.7, "timestamp": 1716000000050 }
+  ]
+}
+```
+
+**Etiquetas válidas:** `CAIDA`, `CAMINAR`, `CORRER`, `QUIETO`, `SUBIR_ESCALERAS`, `BAJAR_ESCALERAS`.
+
+**Formato CSV generado (`dataset_jepo.csv`):**
+```
+timestamp,x,y,z,etiqueta
+1716000000000,1.2,0.5,9.8,CAIDA
+1716000000050,1.3,0.4,9.7,CAIDA
+```
+
+**Respuesta 200:**
+```json
+{
+  "success": true,
+  "message": "Muestras registradas",
+  "data": { "muestras_escritas": 50 }
+}
+```
+
+**Notas:**
+- No requiere JWT (marcado como `@Public()`), solo `x-api-key`.
+- El archivo se crea automáticamente con headers al iniciar el servidor si no existe.
+- Diseñado para uso temporal durante la fase de recolección de datos.
+
+---
+
 ## Formato de Respuesta Estándar
 
 Todas las respuestas siguen esta estructura:
@@ -659,6 +707,7 @@ Throttler global a partir de `THROTTLE_LIMIT` / `THROTTLE_TTL` del `.env` (por d
 - **UpdateIncidentAlertDto**: todos opcionales
 - **UpdateUserDto**: todos opcionales (`password` dispara invalidación de JWT)
 - **UpdateTokenDto**: `token_fcm`
+- **RecolectarTelemetriaDto**: `etiqueta` (enum: CAIDA, CAMINAR, CORRER, QUIETO, SUBIR_ESCALERAS, BAJAR_ESCALERAS), `muestras` (array de `{ x, y, z, timestamp }`)
 
 ## Notas para el frontend
 

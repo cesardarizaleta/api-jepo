@@ -17,6 +17,7 @@ import { MailerModule } from './common/mailer/mailer.module';
 import { VerificationModule } from './common/verification/verification.module';
 import { AuthModule } from './auth/auth.module';
 import { HealthModule } from './setup/health/health.module';
+import { TelemetriaModule } from './telemetria/telemetria.module';
 
 @Module({
   imports: [
@@ -65,6 +66,7 @@ import { HealthModule } from './setup/health/health.module';
     IncidentAlertsModule,
     UsersModule,
     UsersApiModule,
+    TelemetriaModule,
   ],
   controllers: [AppController],
   providers: [
