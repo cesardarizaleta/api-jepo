@@ -3,22 +3,14 @@ import { Type } from 'class-transformer';
 import {
   ArrayMinSize,
   IsArray,
-  IsEnum,
+  IsNotEmpty,
   IsNumber,
+  IsString,
   ValidateNested,
 } from 'class-validator';
 
-export enum EtiquetaHAR {
-  CAIDA = 'CAIDA',
-  CAMINAR = 'CAMINAR',
-  CORRER = 'CORRER',
-  QUIETO = 'QUIETO',
-  SUBIR_ESCALERAS = 'SUBIR_ESCALERAS',
-  BAJAR_ESCALERAS = 'BAJAR_ESCALERAS',
-}
-
 export class MuestraSensorDto {
-  @ApiProperty({ example: 1716000000000, description: 'Timestamp en ms' })
+  @ApiProperty({ example: 1778787715004, description: 'Timestamp en ms' })
   @IsNumber()
   t: number;
 
@@ -49,12 +41,12 @@ export class MuestraSensorDto {
 
 export class RecolectarTelemetriaDto {
   @ApiProperty({
-    enum: EtiquetaHAR,
-    example: EtiquetaHAR.CAIDA,
-    description: 'Etiqueta de la actividad registrada',
+    example: 'CAIDA',
+    description: 'Etiqueta libre de la actividad registrada',
   })
-  @IsEnum(EtiquetaHAR)
-  etiqueta: EtiquetaHAR;
+  @IsString()
+  @IsNotEmpty()
+  etiqueta: string;
 
   @ApiProperty({
     type: [MuestraSensorDto],
