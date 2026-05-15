@@ -612,11 +612,11 @@ Endpoint para recolectar datos de sensores del teléfono y subir el dataset al b
 
 | Método | Ruta | Descripción | Auth |
 |--------|------|-------------|------|
-| POST | `/api/telemetria/recolectar` | Subir muestras de sensores como CSV a MinIO | Solo `x-api-key` |
+| POST | `/api/telemetria/recolectar` | Subir muestras de sensores como CSV a MinIO | `x-api-key` + Bearer |
 
 ### POST /api/telemetria/recolectar
 
-Recibe un lote de lecturas del acelerómetro y giroscopio con su etiqueta de actividad, genera un CSV y lo sube al bucket de MinIO.
+Recibe un lote de lecturas del acelerómetro y giroscopio con su etiqueta de actividad, genera un CSV y lo sube al bucket de MinIO. El usuario se extrae del JWT.
 
 **Body:**
 ```json
@@ -636,7 +636,10 @@ Recibe un lote de lecturas del acelerómetro y giroscopio con su etiqueta de act
 
 **Etiqueta:** cualquier string no vacío (libre, sin restricción de vocabulario).
 
-**Nomenclatura del archivo en MinIO:** `dataset-{etiqueta}-{usuario}-{timestamp}.csv`
+**Nomenclatura del archivo en MinIO:** `dataset-{etiqueta}-{userId}-{timestamp}.csv`
+- `{etiqueta}`: campo `etiqueta` del payload (lowercase, sin espacios).
+- `{userId}`: ID numérico extraído del JWT (`req.user.sub`).
+- `{timestamp}`: `Date.now()` al momento de la subida.
 
 **Respuesta 200:**
 ```json
@@ -645,15 +648,15 @@ Recibe un lote de lecturas del acelerómetro y giroscopio con su etiqueta de act
   "message": "Muestras registradas",
   "data": {
     "muestras_escritas": 50,
-    "archivo": "dataset-caida-JesusAraujo-1778787715004.csv"
+    "archivo": "dataset-caida-5-1778787715004.csv"
   }
 }
 ```
 
 **Notas:**
-- No requiere JWT (marcado como `@Public()`), solo `x-api-key`.
+- Requiere `x-api-key` + Bearer JWT (protegido por `JwtAuthGuard`).
 - Throttling deshabilitado para este módulo (`@SkipThrottle()`).
-- Configuración MinIO vía variables de entorno: `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_BUCKET`, `MINIO_REGION`, `MINIO_DEFAULT_USER`.
+- Configuración MinIO vía variables de entorno: `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_BUCKET`, `MINIO_REGION`.
 
 ---
 
