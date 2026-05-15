@@ -1,11 +1,4 @@
-import {
-  Body,
-  Controller,
-  HttpCode,
-  HttpStatus,
-  Logger,
-  Post,
-} from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import {
   ApiBody,
   ApiOkResponse,
@@ -13,50 +6,43 @@ import {
   ApiSecurity,
   ApiTags,
 } from '@nestjs/swagger';
+import { SkipThrottle } from '@nestjs/throttler';
 import { Public } from '../common/decorators/public.decorator';
 import { RecolectarTelemetriaDto } from './dto/recolectar-telemetria.dto';
 import { TelemetriaService } from './telemetria.service';
 
 @ApiTags('Telemetria')
 @ApiSecurity('x-api-key')
+@SkipThrottle()
 @Controller('telemetria')
 export class TelemetriaController {
-  private readonly logger = new Logger('FlutterDebug');
-
   constructor(private readonly telemetriaService: TelemetriaService) {}
 
   @Public()
   @Post('recolectar')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Recolectar muestras de sensores para dataset HAR',
+    summary: 'Recolectar muestras de sensores y subir dataset a MinIO',
   })
   @ApiBody({ type: RecolectarTelemetriaDto })
   @ApiOkResponse({
-    description: 'Muestras guardadas en dataset_jepo.csv',
+    description: 'Muestras subidas al bucket de MinIO',
     schema: {
       example: {
         success: true,
         message: 'Muestras registradas',
-        data: { muestras_escritas: 50 },
+        data: {
+          muestras_escritas: 50,
+          archivo: 'dataset-caida-JesusAraujo-1778787715004.csv',
+        },
       },
     },
   })
   async recolectar(@Body() dto: RecolectarTelemetriaDto) {
-    const count = await this.telemetriaService.recolectar(dto);
+    const result = await this.telemetriaService.recolectar(dto);
     return {
       message: 'Muestras registradas',
-      data: { muestras_escritas: count },
+      data: result,
     };
-  }
-
-  @Public()
-  @Post('debug')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Recibir logs de depuración desde Flutter' })
-  @ApiOkResponse({ description: 'Log recibido' })
-  async debug(@Body() payload: { log: string }) {
-    this.logger.debug(payload?.log ?? '(vacío)');
-    return { message: 'Log recibido', data: null };
   }
 }

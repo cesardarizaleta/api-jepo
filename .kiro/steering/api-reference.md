@@ -606,17 +606,17 @@ Retorna la lista de usuarios que tienen al usuario autenticado como contacto de 
 
 ---
 
-## Telemetría (Data Logger — temporal para entrenamiento HAR)
+## Telemetría (Data Logger — almacenamiento en MinIO)
 
-Endpoint temporal para recolectar datos de sensores del teléfono y generar el dataset de entrenamiento del modelo TinyML de Human Activity Recognition.
+Endpoint para recolectar datos de sensores del teléfono y subir el dataset al bucket MinIO (S3-compatible) para entrenamiento del modelo TinyML de Human Activity Recognition.
 
 | Método | Ruta | Descripción | Auth |
 |--------|------|-------------|------|
-| POST | `/api/telemetria/recolectar` | Guardar muestras de acelerómetro en CSV | Solo `x-api-key` |
+| POST | `/api/telemetria/recolectar` | Subir muestras de sensores como CSV a MinIO | Solo `x-api-key` |
 
 ### POST /api/telemetria/recolectar
 
-Recibe un lote de lecturas del acelerómetro con su etiqueta de actividad y las agrega (append) al archivo `dataset_jepo.csv` en la raíz del proyecto.
+Recibe un lote de lecturas del acelerómetro y giroscopio con su etiqueta de actividad, genera un CSV y lo sube al bucket de MinIO.
 
 **Body:**
 ```json
@@ -634,28 +634,26 @@ Recibe un lote de lecturas del acelerómetro con su etiqueta de actividad y las 
 - `ax`, `ay`, `az`: acelerómetro (m/s²)
 - `gx`, `gy`, `gz`: giroscopio (rad/s)
 
-**Etiquetas válidas:** `CAIDA`, `CAMINAR`, `CORRER`, `QUIETO`, `SUBIR_ESCALERAS`, `BAJAR_ESCALERAS`.
+**Etiqueta:** cualquier string no vacío (libre, sin restricción de vocabulario).
 
-**Formato CSV generado (`dataset_jepo.csv`):**
-```
-timestamp,ax,ay,az,gx,gy,gz,etiqueta
-1778787715004,0.12,-0.34,9.7,0.01,0.02,0.0,CAIDA
-1778787715054,0.15,-0.30,9.6,0.02,0.01,0.0,CAIDA
-```
+**Nomenclatura del archivo en MinIO:** `dataset-{etiqueta}-{usuario}-{timestamp}.csv`
 
 **Respuesta 200:**
 ```json
 {
   "success": true,
   "message": "Muestras registradas",
-  "data": { "muestras_escritas": 50 }
+  "data": {
+    "muestras_escritas": 50,
+    "archivo": "dataset-caida-JesusAraujo-1778787715004.csv"
+  }
 }
 ```
 
 **Notas:**
 - No requiere JWT (marcado como `@Public()`), solo `x-api-key`.
-- El archivo se crea automáticamente con headers al iniciar el servidor si no existe.
-- Diseñado para uso temporal durante la fase de recolección de datos.
+- Throttling deshabilitado para este módulo (`@SkipThrottle()`).
+- Configuración MinIO vía variables de entorno: `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_BUCKET`, `MINIO_REGION`, `MINIO_DEFAULT_USER`.
 
 ---
 
