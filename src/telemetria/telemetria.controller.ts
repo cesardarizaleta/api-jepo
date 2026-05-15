@@ -1,4 +1,11 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  Logger,
+  Post,
+} from '@nestjs/common';
 import {
   ApiBody,
   ApiOkResponse,
@@ -14,6 +21,8 @@ import { TelemetriaService } from './telemetria.service';
 @ApiSecurity('x-api-key')
 @Controller('telemetria')
 export class TelemetriaController {
+  private readonly logger = new Logger('FlutterDebug');
+
   constructor(private readonly telemetriaService: TelemetriaService) {}
 
   @Public()
@@ -39,5 +48,15 @@ export class TelemetriaController {
       message: 'Muestras registradas',
       data: { muestras_escritas: count },
     };
+  }
+
+  @Public()
+  @Post('debug')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Recibir logs de depuración desde Flutter' })
+  @ApiOkResponse({ description: 'Log recibido' })
+  async debug(@Body() payload: { log: string }) {
+    this.logger.debug(payload?.log ?? '(vacío)');
+    return { message: 'Log recibido', data: null };
   }
 }
