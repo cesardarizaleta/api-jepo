@@ -101,6 +101,30 @@ export class IncidentAlertsController {
     };
   }
 
+  @ApiOperation({
+    summary: 'Crear alerta manual de incidente del usuario autenticado',
+  })
+  @Post('manual')
+  @ApiBody({ type: CreateIncidentAlertDto })
+  @ApiCreatedResponse({ description: 'Alerta manual creada' })
+  async createManual(
+    @Req() request: RequestWithUser,
+    @Body() createAlertDto: CreateIncidentAlertDto,
+  ) {
+    const result = await this.incidentAlertsService.createManual(
+      request.user.sub,
+      createAlertDto,
+    );
+    return {
+      message: 'Alerta creada',
+      data: {
+        alerta: result.alerta,
+        contactosNotificar: result.contactosNotificar,
+        notificaciones: result.notificaciones,
+      },
+    };
+  }
+
   @ApiOperation({ summary: 'Listar alertas del usuario autenticado' })
   @ApiOkResponse({
     description: 'Alertas obtenidas',

@@ -91,6 +91,61 @@ export class IncidentAlertsService {
     };
   }
 
+  async createManual(
+    idUsuarioAutenticado: number,
+    createAlertDto: CreateIncidentAlertDto,
+  ): Promise<AlertCreateResult> {
+    const user = await this.findUserOrFail(idUsuarioAutenticado);
+
+    const alert = this.alertsRepository.create({
+      ...createAlertDto,
+      id_usuario: user.cedula,
+      latitud: createAlertDto.latitud.toFixed(8),
+      longitud: createAlertDto.longitud.toFixed(8),
+      fecha_hora: createAlertDto.fecha_hora
+        ? new Date(createAlertDto.fecha_hora)
+        : new Date(),
+      es_proactiva: false, // Forzar a false para asistencia manual
+    });
+
+    const savedAlert = await this.alertsRepository.save(alert);
+
+    let contactosNotificar: EmergencyContact[] = [];
+    const notificaciones: AlertCreateResult['notificaciones'] = null;
+
+    contactosNotificar = await this.contactsRepository.find({
+      where: { id_usuario: savedAlert.id_usuario },
+      order: { prioridad: 'ASC', id: 'ASC' },
+    });
+
+    // Ejecutar envíos en background (no bloquear la petición)
+    this.evolutionNotificationService
+      .notifyEmergencyContacts(
+        savedAlert,
+        `${user.nombre} ${user.apellido}`.trim(),
+        contactosNotificar,
+        true, // isManual = true
+      )
+      .then((detail) => {
+        const sent = detail.filter((item) => item.success).length;
+        this.logger.log(
+          `Notificaciones manuales enviadas: ${sent}/${detail.length} para alerta ${savedAlert.id}`,
+        );
+      })
+      .catch((err) => {
+        this.logger.error(
+          'Error enviando notificaciones manuales por Evolution API',
+          err,
+        );
+      });
+
+    return {
+      alerta: savedAlert,
+      contactosNotificar,
+      notificaciones,
+    };
+  }
+
   async findAllByUser(idUsuarioAutenticado: number): Promise<IncidentAlert[]> {
     const user = await this.findUserOrFail(idUsuarioAutenticado);
     return this.alertsRepository.find({

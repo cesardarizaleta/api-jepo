@@ -30,6 +30,7 @@ export class EvolutionNotificationService {
     alert: IncidentAlert,
     userFullName: string,
     contacts: EmergencyContact[],
+    isManual = false,
   ): Promise<EvolutionSendResult[]> {
     if (!this.isConfigured()) {
       this.logger.warn(
@@ -43,7 +44,7 @@ export class EvolutionNotificationService {
       }));
     }
 
-    const message = this.buildAlertMessage(alert, userFullName);
+    const message = this.buildAlertMessage(alert, userFullName, isManual);
 
     // Ejecutar envíos en paralelo y recoger resultados
     const tasks = contacts.map(async (contact) => {
@@ -92,8 +93,23 @@ export class EvolutionNotificationService {
   private buildAlertMessage(
     alert: IncidentAlert,
     userFullName: string,
+    isManual = false,
   ): string {
     const mapsLink = `https://maps.google.com/?q=${alert.latitud},${alert.longitud}`;
+    if (isManual) {
+      return [
+        '🚨 *ALERTA DE ASISTENCIA MANUAL*',
+        '',
+        `👤 Persona: *${userFullName}* ha solicitado asistencia de forma manual.`,
+        `🕒 Fecha: ${alert.fecha_hora.toLocaleString('es-CL', {
+          timeZone: 'America/Santiago',
+        })}`,
+        '',
+        `📍 Ubicación: ${mapsLink}`,
+        '',
+        '⚠️ Por favor, intenta comunicarte o asistir al usuario lo antes posible.',
+      ].join('\n');
+    }
     return [
       '🚨 *ALERTA DE EMERGENCIA*',
       '',
