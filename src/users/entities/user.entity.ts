@@ -35,14 +35,56 @@ export class User {
   @Column({ type: 'varchar', length: 120, unique: true })
   email: string;
 
-  @Column({ type: 'varchar', length: 30 })
+  @Column({ type: 'varchar', length: 30, unique: true })
   telefono: string;
 
   @Column({ type: 'varchar', length: 255, select: false, nullable: true })
   password_hash: string | null;
 
+  @Column({
+    name: 'password_changed_at',
+    type: 'timestamptz',
+    nullable: true,
+  })
+  password_changed_at: Date | null;
+
   @Column({ type: 'varchar', length: 255, nullable: true })
   token_fcm: string | null;
+
+  @Column({
+    name: 'ultima_latitud',
+    type: 'decimal',
+    precision: 10,
+    scale: 8,
+    nullable: true,
+    transformer: {
+      to: (value: number | null) => value,
+      from: (value: string | null) =>
+        value === null || value === undefined ? null : Number(value),
+    },
+  })
+  ultima_latitud: number | null;
+
+  @Column({
+    name: 'ultima_longitud',
+    type: 'decimal',
+    precision: 11,
+    scale: 8,
+    nullable: true,
+    transformer: {
+      to: (value: number | null) => value,
+      from: (value: string | null) =>
+        value === null || value === undefined ? null : Number(value),
+    },
+  })
+  ultima_longitud: number | null;
+
+  @Column({
+    name: 'fecha_ultima_ubicacion',
+    type: 'timestamptz',
+    nullable: true,
+  })
+  fecha_ultima_ubicacion: Date | null;
 
   @OneToMany(() => EmergencyContact, (contact) => contact.usuario)
   contactos: EmergencyContact[];

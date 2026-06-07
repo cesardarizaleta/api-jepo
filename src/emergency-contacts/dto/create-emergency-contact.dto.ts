@@ -1,5 +1,12 @@
-import { IsInt, IsString, Length, Max, Min } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import {
+  IsInt,
+  IsOptional,
+  IsString,
+  Length,
+  Max,
+  Min,
+} from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateEmergencyContactDto {
   @ApiProperty({
@@ -14,7 +21,7 @@ export class CreateEmergencyContactDto {
 
   @ApiProperty({
     example: '+584141234567',
-    description: 'Telefono del contacto de emergencia',
+    description: 'Telefono del contacto de emergencia en formato E.164',
     minLength: 7,
     maxLength: 30,
   })
@@ -22,14 +29,16 @@ export class CreateEmergencyContactDto {
   @Length(7, 30)
   telefono_contacto!: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: 1,
-    description: 'Prioridad del contacto entre 1 y 5',
+    description:
+      'Prioridad del contacto (1-5). Si no se envia, se asigna automaticamente al final de la lista.',
     minimum: 1,
     maximum: 5,
   })
+  @IsOptional()
   @IsInt()
   @Min(1)
   @Max(5)
-  prioridad!: number;
+  prioridad?: number;
 }

@@ -24,6 +24,7 @@ export class UsersService {
   async create(createUserDto: CreateUserDto): Promise<SafeUser> {
     await this.validateUniqueEmail(createUserDto.email);
     await this.validateUniqueCedula(createUserDto.cedula);
+    await this.validateUniquePhone(createUserDto.telefono);
 
     const passwordHash = await this.passwordService.hash(
       createUserDto.password,
@@ -79,6 +80,10 @@ export class UsersService {
       await this.validateUniqueEmail(updateUserDto.email);
     }
 
+    if (updateUserDto.telefono && updateUserDto.telefono !== user.telefono) {
+      await this.validateUniquePhone(updateUserDto.telefono);
+    }
+
     const { password, ...restUpdateUserDto } = updateUserDto;
     const payload: Partial<User> = {
       ...restUpdateUserDto,
@@ -86,6 +91,7 @@ export class UsersService {
 
     if (password) {
       payload.password_hash = await this.passwordService.hash(password);
+      payload.password_changed_at = new Date();
     }
 
     const merged = this.usersRepository.merge(user, payload);
@@ -105,6 +111,23 @@ export class UsersService {
     return this.usersRepository.save(user);
   }
 
+  async updateLocation(
+    id: number,
+    latitud: number,
+    longitud: number,
+  ): Promise<SafeUser> {
+    await this.findOne(id);
+    await this.usersRepository.update(
+      { id },
+      {
+        ultima_latitud: latitud,
+        ultima_longitud: longitud,
+        fecha_ultima_ubicacion: new Date(),
+      },
+    );
+    return this.findOne(id);
+  }
+
   async remove(id: number): Promise<void> {
     await this.findOne(id);
     await this.usersRepository.softDelete(id);
@@ -114,6 +137,15 @@ export class UsersService {
     const existing = await this.usersRepository.findOne({ where: { email } });
     if (existing) {
       throw new ConflictException('Ya existe un usuario con ese email');
+    }
+  }
+
+  private async validateUniquePhone(telefono: string): Promise<void> {
+    const existing = await this.usersRepository.findOne({
+      where: { telefono },
+    });
+    if (existing) {
+      throw new ConflictException('Ya existe un usuario con ese telefono');
     }
   }
 }

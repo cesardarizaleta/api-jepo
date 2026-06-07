@@ -9,10 +9,15 @@ import { ApiKeyGuard } from './common/guards/api-key.guard';
 import { UsersModule } from './users/users.module';
 import { UsersApiModule } from './users/users-api.module';
 import { EmergencyContactsModule } from './emergency-contacts/emergency-contacts.module';
+import { FamilyMapModule } from './family-map/family-map.module';
 import { IncidentAlertsModule } from './incident-alerts/incident-alerts.module';
 import { SecurityModule } from './common/security/security.module';
+import { EvolutionModule } from './common/evolution/evolution.module';
+import { MailerModule } from './common/mailer/mailer.module';
+import { VerificationModule } from './common/verification/verification.module';
 import { AuthModule } from './auth/auth.module';
 import { HealthModule } from './setup/health/health.module';
+import { TelemetriaModule } from './telemetria/telemetria.module';
 
 @Module({
   imports: [
@@ -51,12 +56,17 @@ import { HealthModule } from './setup/health/health.module';
       },
     }),
     SecurityModule,
+    EvolutionModule,
+    MailerModule,
+    VerificationModule,
     AuthModule,
     HealthModule,
     EmergencyContactsModule,
+    FamilyMapModule,
     IncidentAlertsModule,
     UsersModule,
     UsersApiModule,
+    TelemetriaModule,
   ],
   controllers: [AppController],
   providers: [

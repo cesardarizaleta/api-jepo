@@ -7,8 +7,11 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Req,
+  UseGuards,
 } from '@nestjs/common';
 import {
+  ApiBearerAuth,
   ApiBody,
   ApiCreatedResponse,
   ApiOkResponse,
@@ -17,10 +20,20 @@ import {
   ApiSecurity,
   ApiTags,
 } from '@nestjs/swagger';
+import type { Request } from 'express';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateLocationDto } from './dto/update-location.dto';
 import { UpdateTokenDto } from './dto/update-token.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UsersService } from './users.service';
+
+type RequestWithUser = Request & {
+  user: {
+    sub: number;
+    email: string;
+  };
+};
 
 @ApiTags('Usuarios')
 @ApiSecurity('x-api-key')
@@ -79,6 +92,40 @@ export class UsersController {
   async findAll() {
     const users = await this.usersService.findAll();
     return { message: 'Usuarios obtenidos', data: users };
+  }
+
+  @ApiOperation({
+    summary: 'Actualizar ubicacion del usuario autenticado (last-known-location)',
+  })
+  @ApiBearerAuth('bearer')
+  @ApiBody({ type: UpdateLocationDto })
+  @ApiOkResponse({
+    description: 'Ubicacion actualizada',
+    schema: {
+      example: {
+        success: true,
+        message: 'Ubicacion actualizada',
+        data: {
+          id: 1,
+          ultima_latitud: 10.50234567,
+          ultima_longitud: -66.91234567,
+          fecha_ultima_ubicacion: '2026-05-13T14:30:00.000Z',
+        },
+      },
+    },
+  })
+  @UseGuards(JwtAuthGuard)
+  @Patch('me/ubicacion')
+  async updateMyLocation(
+    @Req() request: RequestWithUser,
+    @Body() dto: UpdateLocationDto,
+  ) {
+    const user = await this.usersService.updateLocation(
+      request.user.sub,
+      dto.latitud,
+      dto.longitud,
+    );
+    return { message: 'Ubicacion actualizada', data: user };
   }
 
   @ApiOperation({ summary: 'Obtener usuario por ID' })
