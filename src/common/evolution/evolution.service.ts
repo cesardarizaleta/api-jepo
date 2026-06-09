@@ -54,7 +54,7 @@ export class EvolutionService {
 
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout for text
 
       const response = await fetch(
         `${this.baseUrl}/message/sendText/${this.instance}`,
@@ -116,7 +116,7 @@ export class EvolutionService {
 
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout for audio
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout for audio
 
       const response = await fetch(
         `${this.baseUrl}/message/sendAudio/${this.instance}`,
