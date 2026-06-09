@@ -10,6 +10,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
+import { AlertStatus } from '../alert-status.enum';
 
 @Entity({ schema: 'asistencia_proactiva', name: 'alertas_incidentes' })
 export class IncidentAlert {
@@ -51,6 +52,20 @@ export class IncidentAlert {
 
   @Column({ name: 'es_proactiva', type: 'boolean', default: false })
   es_proactiva: boolean;
+
+  @Index()
+  @Column({
+    type: 'varchar',
+    length: 20,
+    default: AlertStatus.PENDIENTE,
+  })
+  estado: AlertStatus;
+
+  @Column({ name: 'resuelta_en', type: 'timestamptz', nullable: true })
+  resuelta_en: Date | null;
+
+  @Column({ name: 'notas_resolucion', type: 'text', nullable: true })
+  notas_resolucion: string | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

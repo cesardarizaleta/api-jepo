@@ -7,6 +7,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -23,6 +24,8 @@ import {
 import { Request } from 'express';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CreateIncidentAlertDto } from './dto/create-incident-alert.dto';
+import { HistorialQueryDto } from './dto/historial-query.dto';
+import { ResolveAlertDto } from './dto/resolve-alert.dto';
 import { UpdateIncidentAlertDto } from './dto/update-incident-alert.dto';
 import { IncidentAlertsService } from './incident-alerts.service';
 
@@ -156,6 +159,30 @@ export class IncidentAlertsController {
     return { message: 'Alertas obtenidas', data: alerts };
   }
 
+  @ApiOperation({ summary: 'Historial paginado de alertas con filtros' })
+  @Get('historial')
+  @ApiOkResponse({ description: 'Historial de alertas obtenido' })
+  async getHistorial(
+    @Req() request: RequestWithUser,
+    @Query() query: HistorialQueryDto,
+  ) {
+    const historial = await this.incidentAlertsService.getHistorial(
+      request.user.sub,
+      query,
+    );
+    return { message: 'Historial de alertas obtenido', data: historial };
+  }
+
+  @ApiOperation({ summary: 'Métricas agregadas de alertas del usuario' })
+  @Get('metricas')
+  @ApiOkResponse({ description: 'Métricas de alertas obtenidas' })
+  async getMetricas(@Req() request: RequestWithUser) {
+    const metricas = await this.incidentAlertsService.getMetricas(
+      request.user.sub,
+    );
+    return { message: 'Métricas de alertas obtenidas', data: metricas };
+  }
+
   @ApiOperation({ summary: 'Obtener alerta por ID' })
   @ApiParam({ name: 'id', type: Number, example: 100 })
   @ApiOkResponse({
@@ -212,6 +239,24 @@ export class IncidentAlertsController {
       },
     },
   })
+  @ApiOperation({ summary: 'Resolver alerta como real o falso positivo' })
+  @Patch(':id/resolver')
+  @ApiParam({ name: 'id', type: Number, example: 100 })
+  @ApiBody({ type: ResolveAlertDto })
+  @ApiOkResponse({ description: 'Alerta resuelta' })
+  async resolve(
+    @Req() request: RequestWithUser,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() resolveDto: ResolveAlertDto,
+  ) {
+    const alert = await this.incidentAlertsService.resolve(
+      request.user.sub,
+      id,
+      resolveDto,
+    );
+    return { message: 'Alerta resuelta', data: alert };
+  }
+
   @Patch(':id')
   @ApiParam({ name: 'id', type: Number, example: 1 })
   @ApiBody({ type: UpdateIncidentAlertDto })

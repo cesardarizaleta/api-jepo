@@ -1,0 +1,6 @@
+export enum AlertStatus {
+  PENDIENTE = 'PENDIENTE',
+  REAL = 'REAL',
+  FALSO_POSITIVO = 'FALSO_POSITIVO',
+  CANCELADA = 'CANCELADA',
+}

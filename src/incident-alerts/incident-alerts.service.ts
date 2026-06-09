@@ -1,10 +1,18 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+  Logger,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EmergencyContact } from '../emergency-contacts/entities/emergency-contact.entity';
 import { EmergencyContactVerificationStatus } from '../emergency-contacts/emergency-contact.enums';
 import { User } from '../users/entities/user.entity';
+import { AlertStatus } from './alert-status.enum';
 import { CreateIncidentAlertDto } from './dto/create-incident-alert.dto';
+import { HistorialQueryDto } from './dto/historial-query.dto';
+import { ResolveAlertDto } from './dto/resolve-alert.dto';
 import { UpdateIncidentAlertDto } from './dto/update-incident-alert.dto';
 import { IncidentAlert } from './entities/incident-alert.entity';
 import {
@@ -21,6 +29,33 @@ type AlertCreateResult = {
     fallidas: number;
     detalle: EvolutionSendResult[];
   } | null;
+};
+
+export type AlertMetricsResult = {
+  totalAlertas: number;
+  alertasReales: number;
+  falsosPositivos: number;
+  canceladas: number;
+  pendientes: number;
+  tasaFalsosPositivos: number;
+  tasaAlertasReales: number;
+  promedioAlertasPorMes: number;
+  ultimaAlerta: string | null;
+  alertasPorMes: Array<{
+    mes: string;
+    total: number;
+    reales: number;
+    falsosPositivos: number;
+    canceladas: number;
+  }>;
+};
+
+export type AlertHistorialResult = {
+  data: IncidentAlert[];
+  total: number;
+  pagina: number;
+  porPagina: number;
+  totalPaginas: number;
 };
 
 @Injectable()
@@ -50,6 +85,7 @@ export class IncidentAlertsService {
       fecha_hora: createAlertDto.fecha_hora
         ? new Date(createAlertDto.fecha_hora)
         : new Date(),
+      estado: AlertStatus.PENDIENTE,
     });
 
     const savedAlert = await this.alertsRepository.save(alert);
@@ -110,6 +146,7 @@ export class IncidentAlertsService {
         ? new Date(createAlertDto.fecha_hora)
         : new Date(),
       es_proactiva: false, // Forzar a false para asistencia manual
+      estado: AlertStatus.PENDIENTE,
     });
 
     const savedAlert = await this.alertsRepository.save(alert);
@@ -194,7 +231,177 @@ export class IncidentAlertsService {
         : alert.fecha_hora,
     });
 
+    if (
+      updateAlertDto.es_proactiva === false &&
+      (!alert.estado || alert.estado === AlertStatus.PENDIENTE)
+    ) {
+      merged.estado = AlertStatus.CANCELADA;
+      merged.resuelta_en = new Date();
+    }
+
     return this.alertsRepository.save(merged);
+  }
+
+  async resolve(
+    idUsuarioAutenticado: number,
+    id: number,
+    dto: ResolveAlertDto,
+  ): Promise<IncidentAlert> {
+    const alert = await this.findOneByUser(idUsuarioAutenticado, id);
+
+    if (alert.estado !== AlertStatus.PENDIENTE) {
+      throw new BadRequestException('La alerta ya fue resuelta');
+    }
+
+    alert.estado = dto.estado;
+    alert.resuelta_en = new Date();
+    if (dto.notas_resolucion !== undefined) {
+      alert.notas_resolucion = dto.notas_resolucion;
+    }
+
+    return this.alertsRepository.save(alert);
+  }
+
+  async getHistorial(
+    idUsuarioAutenticado: number,
+    filtros: HistorialQueryDto,
+  ): Promise<AlertHistorialResult> {
+    const user = await this.findUserOrFail(idUsuarioAutenticado);
+    const pagina = filtros.pagina ?? 1;
+    const porPagina = filtros.porPagina ?? 20;
+
+    const qb = this.alertsRepository
+      .createQueryBuilder('alerta')
+      .where('alerta.id_usuario = :cedula', { cedula: user.cedula });
+
+    if (filtros.estado) {
+      qb.andWhere('alerta.estado = :estado', { estado: filtros.estado });
+    }
+    if (filtros.desde) {
+      qb.andWhere('alerta.fecha_hora >= :desde', {
+        desde: new Date(filtros.desde),
+      });
+    }
+    if (filtros.hasta) {
+      qb.andWhere('alerta.fecha_hora <= :hasta', {
+        hasta: new Date(filtros.hasta),
+      });
+    }
+
+    const total = await qb.getCount();
+
+    const data = await qb
+      .orderBy('alerta.fecha_hora', 'DESC')
+      .skip((pagina - 1) * porPagina)
+      .take(porPagina)
+      .getMany();
+
+    return {
+      data,
+      total,
+      pagina,
+      porPagina,
+      totalPaginas: total === 0 ? 0 : Math.ceil(total / porPagina),
+    };
+  }
+
+  async getMetricas(idUsuarioAutenticado: number): Promise<AlertMetricsResult> {
+    const user = await this.findUserOrFail(idUsuarioAutenticado);
+    const cedula = user.cedula;
+
+    const statusRows = await this.alertsRepository
+      .createQueryBuilder('a')
+      .select('a.estado', 'estado')
+      .addSelect('COUNT(*)::int', 'count')
+      .where('a.id_usuario = :cedula', { cedula })
+      .groupBy('a.estado')
+      .getRawMany<{ estado: AlertStatus; count: number }>();
+
+    const countByStatus = (status: AlertStatus): number =>
+      Number(
+        statusRows.find((row) => row.estado === status)?.count ?? 0,
+      );
+
+    const alertasReales = countByStatus(AlertStatus.REAL);
+    const falsosPositivos = countByStatus(AlertStatus.FALSO_POSITIVO);
+    const canceladas = countByStatus(AlertStatus.CANCELADA);
+    const pendientes = countByStatus(AlertStatus.PENDIENTE);
+    const totalAlertas =
+      alertasReales + falsosPositivos + canceladas + pendientes;
+
+    const clasificadas = alertasReales + falsosPositivos;
+    const tasaFalsosPositivos =
+      clasificadas > 0
+        ? Math.round((falsosPositivos / clasificadas) * 1000) / 10
+        : 0;
+    const tasaAlertasReales =
+      clasificadas > 0
+        ? Math.round((alertasReales / clasificadas) * 1000) / 10
+        : 0;
+
+    const monthlyRows = await this.alertsRepository.query(
+      `
+      SELECT
+        TO_CHAR(fecha_hora, 'YYYY-MM') AS mes,
+        COUNT(*)::int AS total,
+        COUNT(*) FILTER (WHERE estado = $2)::int AS reales,
+        COUNT(*) FILTER (WHERE estado = $3)::int AS "falsosPositivos",
+        COUNT(*) FILTER (WHERE estado = $4)::int AS canceladas
+      FROM asistencia_proactiva.alertas_incidentes
+      WHERE cedula_usuario = $1
+        AND deleted_at IS NULL
+      GROUP BY TO_CHAR(fecha_hora, 'YYYY-MM')
+      ORDER BY mes ASC
+      `,
+      [
+        cedula,
+        AlertStatus.REAL,
+        AlertStatus.FALSO_POSITIVO,
+        AlertStatus.CANCELADA,
+      ],
+    );
+
+    const alertasPorMes = monthlyRows.map(
+      (row: {
+        mes: string;
+        total: number;
+        reales: number;
+        falsosPositivos: number;
+        canceladas: number;
+      }) => ({
+        mes: row.mes,
+        total: Number(row.total),
+        reales: Number(row.reales),
+        falsosPositivos: Number(row.falsosPositivos),
+        canceladas: Number(row.canceladas),
+      }),
+    );
+
+    const promedioAlertasPorMes =
+      alertasPorMes.length > 0
+        ? Math.round((totalAlertas / alertasPorMes.length) * 10) / 10
+        : 0;
+
+    const ultimaRow = await this.alertsRepository
+      .createQueryBuilder('a')
+      .select('MAX(a.fecha_hora)', 'ultima')
+      .where('a.id_usuario = :cedula', { cedula })
+      .getRawOne<{ ultima: Date | null }>();
+
+    return {
+      totalAlertas,
+      alertasReales,
+      falsosPositivos,
+      canceladas,
+      pendientes,
+      tasaFalsosPositivos,
+      tasaAlertasReales,
+      promedioAlertasPorMes,
+      ultimaAlerta: ultimaRow?.ultima
+        ? new Date(ultimaRow.ultima).toISOString()
+        : null,
+      alertasPorMes,
+    };
   }
 
   async remove(idUsuarioAutenticado: number, id: number): Promise<void> {

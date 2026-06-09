@@ -1,11 +1,14 @@
 import {
   IsBoolean,
   IsDateString,
+  IsEnum,
   IsNumber,
   IsOptional,
+  IsString,
   IsUrl,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { AlertStatus } from '../alert-status.enum';
 
 export class UpdateIncidentAlertDto {
   @ApiPropertyOptional({
@@ -44,4 +47,14 @@ export class UpdateIncidentAlertDto {
   @IsOptional()
   @IsBoolean()
   es_proactiva?: boolean;
+
+  @ApiPropertyOptional({ enum: AlertStatus })
+  @IsOptional()
+  @IsEnum(AlertStatus)
+  estado?: AlertStatus;
+
+  @ApiPropertyOptional({ example: 'Usuario confirmó que está bien' })
+  @IsOptional()
+  @IsString()
+  notas_resolucion?: string;
 }
