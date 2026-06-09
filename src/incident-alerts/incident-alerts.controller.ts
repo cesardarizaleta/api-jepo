@@ -25,7 +25,7 @@ import { Request } from 'express';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CreateIncidentAlertDto } from './dto/create-incident-alert.dto';
 import { HistorialQueryDto } from './dto/historial-query.dto';
-import { ResolveAlertDto } from './dto/resolve-alert.dto';
+import { RegisterFalsoPositivoDto } from './dto/register-falso-positivo.dto';
 import { UpdateIncidentAlertDto } from './dto/update-incident-alert.dto';
 import { IncidentAlertsService } from './incident-alerts.service';
 
@@ -183,6 +183,23 @@ export class IncidentAlertsController {
     return { message: 'Métricas de alertas obtenidas', data: metricas };
   }
 
+  @ApiOperation({
+    summary: 'Registrar falso positivo (usuario confirmó que está bien)',
+  })
+  @Post('falso-positivo')
+  @ApiBody({ type: RegisterFalsoPositivoDto })
+  @ApiCreatedResponse({ description: 'Falso positivo registrado' })
+  async registerFalsoPositivo(
+    @Req() request: RequestWithUser,
+    @Body() dto: RegisterFalsoPositivoDto,
+  ) {
+    const alert = await this.incidentAlertsService.registerFalsoPositivo(
+      request.user.sub,
+      dto,
+    );
+    return { message: 'Falso positivo registrado', data: alert };
+  }
+
   @ApiOperation({ summary: 'Obtener alerta por ID' })
   @ApiParam({ name: 'id', type: Number, example: 100 })
   @ApiOkResponse({
@@ -239,24 +256,6 @@ export class IncidentAlertsController {
       },
     },
   })
-  @ApiOperation({ summary: 'Resolver alerta como real o falso positivo' })
-  @Patch(':id/resolver')
-  @ApiParam({ name: 'id', type: Number, example: 100 })
-  @ApiBody({ type: ResolveAlertDto })
-  @ApiOkResponse({ description: 'Alerta resuelta' })
-  async resolve(
-    @Req() request: RequestWithUser,
-    @Param('id', ParseIntPipe) id: number,
-    @Body() resolveDto: ResolveAlertDto,
-  ) {
-    const alert = await this.incidentAlertsService.resolve(
-      request.user.sub,
-      id,
-      resolveDto,
-    );
-    return { message: 'Alerta resuelta', data: alert };
-  }
-
   @Patch(':id')
   @ApiParam({ name: 'id', type: Number, example: 1 })
   @ApiBody({ type: UpdateIncidentAlertDto })

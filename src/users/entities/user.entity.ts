@@ -35,7 +35,7 @@ export class User {
   @Column({ type: 'varchar', length: 120, unique: true })
   email: string;
 
-  @Column({ type: 'varchar', length: 30, unique: true })
+  @Column({ type: 'varchar', length: 30 })
   telefono: string;
 
   @Column({ type: 'varchar', length: 255, select: false, nullable: true })

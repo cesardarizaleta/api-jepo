@@ -53,7 +53,7 @@ export class IncidentAlert {
   @Column({ name: 'es_proactiva', type: 'boolean', default: false })
   es_proactiva: boolean;
 
-  @Index()
+  @Index('ix_alertas_estado')
   @Column({
     type: 'varchar',
     length: 20,

@@ -1,9 +1,4 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EmergencyContact } from '../emergency-contacts/entities/emergency-contact.entity';
@@ -12,7 +7,7 @@ import { User } from '../users/entities/user.entity';
 import { AlertStatus } from './alert-status.enum';
 import { CreateIncidentAlertDto } from './dto/create-incident-alert.dto';
 import { HistorialQueryDto } from './dto/historial-query.dto';
-import { ResolveAlertDto } from './dto/resolve-alert.dto';
+import { RegisterFalsoPositivoDto } from './dto/register-falso-positivo.dto';
 import { UpdateIncidentAlertDto } from './dto/update-incident-alert.dto';
 import { IncidentAlert } from './entities/incident-alert.entity';
 import {
@@ -35,7 +30,6 @@ export type AlertMetricsResult = {
   totalAlertas: number;
   alertasReales: number;
   falsosPositivos: number;
-  canceladas: number;
   pendientes: number;
   tasaFalsosPositivos: number;
   tasaAlertasReales: number;
@@ -46,7 +40,6 @@ export type AlertMetricsResult = {
     total: number;
     reales: number;
     falsosPositivos: number;
-    canceladas: number;
   }>;
 };
 
@@ -61,6 +54,8 @@ export type AlertHistorialResult = {
 @Injectable()
 export class IncidentAlertsService {
   private readonly logger = new Logger(IncidentAlertsService.name);
+  private static readonly SIN_AUDIO_URL = 'https://jepo.local/sin-audio';
+
   constructor(
     @InjectRepository(IncidentAlert)
     private readonly alertsRepository: Repository<IncidentAlert>,
@@ -102,19 +97,20 @@ export class IncidentAlertsService {
         order: { prioridad: 'ASC', id: 'ASC' },
       });
 
+      const resolvedAlert = await this.markAsReal(savedAlert);
+
       // Ejecutar envíos en background (no bloquear la petición)
       this.evolutionNotificationService
         .notifyEmergencyContacts(
-          savedAlert,
+          resolvedAlert,
           `${user.nombre} ${user.apellido}`.trim(),
           contactosNotificar,
         )
         .then((detail) => {
           const sent = detail.filter((item) => item.success).length;
           this.logger.log(
-            `Notificaciones enviadas: ${sent}/${detail.length} para alerta ${savedAlert.id}`,
+            `Notificaciones enviadas: ${sent}/${detail.length} para alerta ${resolvedAlert.id}`,
           );
-          // Opcional: persistir `detail` en BD para auditoría.
         })
         .catch((err) => {
           this.logger.error(
@@ -122,6 +118,12 @@ export class IncidentAlertsService {
             err,
           );
         });
+
+      return {
+        alerta: resolvedAlert,
+        contactosNotificar,
+        notificaciones,
+      };
     }
 
     return {
@@ -150,27 +152,27 @@ export class IncidentAlertsService {
     });
 
     const savedAlert = await this.alertsRepository.save(alert);
+    const resolvedAlert = await this.markAsReal(savedAlert);
 
     let contactosNotificar: EmergencyContact[] = [];
     const notificaciones: AlertCreateResult['notificaciones'] = null;
 
     contactosNotificar = await this.contactsRepository.find({
-      where: { id_usuario: savedAlert.id_usuario },
+      where: { id_usuario: resolvedAlert.id_usuario },
       order: { prioridad: 'ASC', id: 'ASC' },
     });
 
-    // Ejecutar envíos en background (no bloquear la petición)
     this.evolutionNotificationService
       .notifyEmergencyContacts(
-        savedAlert,
+        resolvedAlert,
         `${user.nombre} ${user.apellido}`.trim(),
         contactosNotificar,
-        true, // isManual = true
+        true,
       )
       .then((detail) => {
         const sent = detail.filter((item) => item.success).length;
         this.logger.log(
-          `Notificaciones manuales enviadas: ${sent}/${detail.length} para alerta ${savedAlert.id}`,
+          `Notificaciones manuales enviadas: ${sent}/${detail.length} para alerta ${resolvedAlert.id}`,
         );
       })
       .catch((err) => {
@@ -181,10 +183,31 @@ export class IncidentAlertsService {
       });
 
     return {
-      alerta: savedAlert,
+      alerta: resolvedAlert,
       contactosNotificar,
       notificaciones,
     };
+  }
+
+  async registerFalsoPositivo(
+    idUsuarioAutenticado: number,
+    dto: RegisterFalsoPositivoDto,
+  ): Promise<IncidentAlert> {
+    const user = await this.findUserOrFail(idUsuarioAutenticado);
+    const now = new Date();
+
+    const alert = this.alertsRepository.create({
+      id_usuario: user.cedula,
+      latitud: dto.latitud.toFixed(8),
+      longitud: dto.longitud.toFixed(8),
+      url_audio_contexto: IncidentAlertsService.SIN_AUDIO_URL,
+      fecha_hora: dto.fecha_hora ? new Date(dto.fecha_hora) : now,
+      es_proactiva: false,
+      estado: AlertStatus.FALSO_POSITIVO,
+      resuelta_en: now,
+    });
+
+    return this.alertsRepository.save(alert);
   }
 
   async findAllByUser(idUsuarioAutenticado: number): Promise<IncidentAlert[]> {
@@ -231,35 +254,7 @@ export class IncidentAlertsService {
         : alert.fecha_hora,
     });
 
-    if (
-      updateAlertDto.es_proactiva === false &&
-      (!alert.estado || alert.estado === AlertStatus.PENDIENTE)
-    ) {
-      merged.estado = AlertStatus.CANCELADA;
-      merged.resuelta_en = new Date();
-    }
-
     return this.alertsRepository.save(merged);
-  }
-
-  async resolve(
-    idUsuarioAutenticado: number,
-    id: number,
-    dto: ResolveAlertDto,
-  ): Promise<IncidentAlert> {
-    const alert = await this.findOneByUser(idUsuarioAutenticado, id);
-
-    if (alert.estado !== AlertStatus.PENDIENTE) {
-      throw new BadRequestException('La alerta ya fue resuelta');
-    }
-
-    alert.estado = dto.estado;
-    alert.resuelta_en = new Date();
-    if (dto.notas_resolucion !== undefined) {
-      alert.notas_resolucion = dto.notas_resolucion;
-    }
-
-    return this.alertsRepository.save(alert);
   }
 
   async getHistorial(
@@ -324,10 +319,8 @@ export class IncidentAlertsService {
 
     const alertasReales = countByStatus(AlertStatus.REAL);
     const falsosPositivos = countByStatus(AlertStatus.FALSO_POSITIVO);
-    const canceladas = countByStatus(AlertStatus.CANCELADA);
     const pendientes = countByStatus(AlertStatus.PENDIENTE);
-    const totalAlertas =
-      alertasReales + falsosPositivos + canceladas + pendientes;
+    const totalAlertas = alertasReales + falsosPositivos + pendientes;
 
     const clasificadas = alertasReales + falsosPositivos;
     const tasaFalsosPositivos =
@@ -345,20 +338,14 @@ export class IncidentAlertsService {
         TO_CHAR(fecha_hora, 'YYYY-MM') AS mes,
         COUNT(*)::int AS total,
         COUNT(*) FILTER (WHERE estado = $2)::int AS reales,
-        COUNT(*) FILTER (WHERE estado = $3)::int AS "falsosPositivos",
-        COUNT(*) FILTER (WHERE estado = $4)::int AS canceladas
+        COUNT(*) FILTER (WHERE estado = $3)::int AS "falsosPositivos"
       FROM asistencia_proactiva.alertas_incidentes
       WHERE cedula_usuario = $1
         AND deleted_at IS NULL
       GROUP BY TO_CHAR(fecha_hora, 'YYYY-MM')
       ORDER BY mes ASC
       `,
-      [
-        cedula,
-        AlertStatus.REAL,
-        AlertStatus.FALSO_POSITIVO,
-        AlertStatus.CANCELADA,
-      ],
+      [cedula, AlertStatus.REAL, AlertStatus.FALSO_POSITIVO],
     );
 
     const alertasPorMes = monthlyRows.map(
@@ -367,13 +354,11 @@ export class IncidentAlertsService {
         total: number;
         reales: number;
         falsosPositivos: number;
-        canceladas: number;
       }) => ({
         mes: row.mes,
         total: Number(row.total),
         reales: Number(row.reales),
         falsosPositivos: Number(row.falsosPositivos),
-        canceladas: Number(row.canceladas),
       }),
     );
 
@@ -392,7 +377,6 @@ export class IncidentAlertsService {
       totalAlertas,
       alertasReales,
       falsosPositivos,
-      canceladas,
       pendientes,
       tasaFalsosPositivos,
       tasaAlertasReales,
@@ -402,6 +386,12 @@ export class IncidentAlertsService {
         : null,
       alertasPorMes,
     };
+  }
+
+  private async markAsReal(alert: IncidentAlert): Promise<IncidentAlert> {
+    alert.estado = AlertStatus.REAL;
+    alert.resuelta_en = new Date();
+    return this.alertsRepository.save(alert);
   }
 
   async remove(idUsuarioAutenticado: number, id: number): Promise<void> {
