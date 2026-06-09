@@ -235,7 +235,7 @@ export class IncidentAlertsController {
     return { message: 'Alerta obtenida', data: alert };
   }
 
-  @ApiOperation({ summary: 'Actualizar alerta por ID' })
+  @ApiOperation({ summary: 'Actualizar alerta por ID (solo para heartbeat)' })
   @ApiParam({ name: 'id', type: Number, example: 100 })
   @ApiOkResponse({
     description: 'Alerta actualizada',
@@ -265,6 +265,10 @@ export class IncidentAlertsController {
     @Param('id', ParseIntPipe) id: number,
     @Body() updateAlertDto: UpdateIncidentAlertDto,
   ) {
+    // Solo permitir actualizaciones de ubicación para heartbeat
+    if (updateAlertDto.latitud === undefined || updateAlertDto.longitud === undefined) {
+      throw new Error('Solo se permiten actualizaciones de ubicación para heartbeat');
+    }
     const alert = await this.incidentAlertsService.update(
       request.user.sub,
       id,
