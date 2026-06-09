@@ -7,6 +7,12 @@ export type EvolutionSendTextResult = {
   error?: string;
 };
 
+export type EvolutionSendAudioResult = {
+  success: boolean;
+  providerMessageId?: string;
+  error?: string;
+};
+
 @Injectable()
 export class EvolutionService {
   private readonly logger = new Logger(EvolutionService.name);
@@ -84,6 +90,76 @@ export class EvolutionService {
       const message =
         error instanceof Error ? error.message : 'Error desconocido';
       this.logger.error(`Fallo enviando mensaje por Evolution API: ${message}`);
+      return { success: false, error: message };
+    }
+  }
+
+  async sendAudio(
+    phone: string,
+    audioBase64: string,
+  ): Promise<EvolutionSendAudioResult> {
+    if (!this.isConfigured()) {
+      this.logger.warn(
+        'Evolution API no configurada. Se omite envio de audio.',
+      );
+      return { success: false, error: 'EVOLUTION_API no configurada' };
+    }
+
+    const number = this.normalizePhone(phone);
+    if (!number) {
+      return { success: false, error: 'Telefono invalido' };
+    }
+
+    if (!audioBase64) {
+      return { success: false, error: 'Audio base64 vacio' };
+    }
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout for audio
+
+      const response = await fetch(
+        `${this.baseUrl}/message/sendAudio/${this.instance}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            apikey: this.apiKey,
+          },
+          body: JSON.stringify({
+            number,
+            audio: audioBase64,
+            options: {
+              delay: 1200,
+              presence: 'recording',
+              encoding: true,
+            },
+          }),
+          signal: controller.signal,
+        },
+      );
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const responseBody = await response.text();
+        this.logger.error(
+          `Error Evolution API audio (${response.status}): ${responseBody}`,
+        );
+        return {
+          success: false,
+          error: `Evolution API respondio ${response.status}`,
+        };
+      }
+
+      const payload: unknown = await response.json();
+      return {
+        success: true,
+        providerMessageId: this.extractMessageId(payload),
+      };
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Error desconocido';
+      this.logger.error(`Fallo enviando audio por Evolution API: ${message}`);
       return { success: false, error: message };
     }
   }

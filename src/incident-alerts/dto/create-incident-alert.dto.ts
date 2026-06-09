@@ -3,6 +3,7 @@ import {
   IsDateString,
   IsNumber,
   IsOptional,
+  IsString,
   IsUrl,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -43,4 +44,28 @@ export class CreateIncidentAlertDto {
   })
   @IsBoolean()
   es_proactiva: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Audio de 5 segundos en base64 capturado antes del impacto',
+    example: 'AAAAGGZ0eX...base64_encoded_audio...',
+  })
+  @IsOptional()
+  @IsString()
+  audio_base64?: string;
+
+  @ApiPropertyOptional({
+    description: 'ID de evento generado por el cliente para deduplicación',
+    example: 'client-uuid-123',
+  })
+  @IsOptional()
+  @IsString()
+  client_event_id?: string;
+
+  @ApiPropertyOptional({
+    description: 'Indica si la alerta fue creada manualmente',
+    example: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  is_manual?: boolean;
 }

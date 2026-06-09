@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { EvolutionService } from '../../common/evolution/evolution.service';
+import { EvolutionService, EvolutionSendAudioResult } from '../../common/evolution/evolution.service';
 import { EmergencyContact } from '../../emergency-contacts/entities/emergency-contact.entity';
 import { IncidentAlert } from '../entities/incident-alert.entity';
 
@@ -22,6 +22,7 @@ export class EvolutionNotificationService {
     userFullName: string,
     contacts: EmergencyContact[],
     isManual = false,
+    audioBase64?: string,
   ): Promise<EvolutionSendResult[]> {
     if (!this.evolutionService.isConfigured()) {
       this.logger.warn(
@@ -38,16 +39,30 @@ export class EvolutionNotificationService {
     const message = this.buildAlertMessage(alert, userFullName, isManual);
 
     const tasks = contacts.map(async (contact) => {
-      const sendResult = await this.evolutionService.sendText(
+      // Send text message first
+      const textResult = await this.evolutionService.sendText(
         contact.telefono_contacto,
         message,
       );
+
+      // Send audio if available
+      let audioResult: EvolutionSendAudioResult | null = null;
+      if (audioBase64) {
+        audioResult = await this.evolutionService.sendAudio(
+          contact.telefono_contacto,
+          audioBase64,
+        );
+        this.logger.log(
+          `Audio enviado a ${contact.telefono_contacto}: ${audioResult?.success ? 'exitoso' : 'fallido'}`,
+        );
+      }
+
       return {
         contactId: contact.id,
         telefono: contact.telefono_contacto,
-        success: sendResult.success,
-        providerMessageId: sendResult.providerMessageId,
-        error: sendResult.error,
+        success: textResult.success,
+        providerMessageId: textResult.providerMessageId,
+        error: textResult.error,
       } as EvolutionSendResult;
     });
 

@@ -105,6 +105,8 @@ export class IncidentAlertsService {
           resolvedAlert,
           `${user.nombre} ${user.apellido}`.trim(),
           contactosNotificar,
+          false,
+          createAlertDto.audio_base64,
         )
         .then((detail) => {
           const sent = detail.filter((item) => item.success).length;
@@ -168,6 +170,7 @@ export class IncidentAlertsService {
         `${user.nombre} ${user.apellido}`.trim(),
         contactosNotificar,
         true,
+        createAlertDto.audio_base64,
       )
       .then((detail) => {
         const sent = detail.filter((item) => item.success).length;
