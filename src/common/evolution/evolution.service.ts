@@ -119,7 +119,7 @@ export class EvolutionService {
       const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout for audio
 
       const response = await fetch(
-        `${this.baseUrl}/message/sendAudio/${this.instance}`,
+        `${this.baseUrl}/message/sendWhatsAppAudio/${this.instance}`,
         {
           method: 'POST',
           headers: {
