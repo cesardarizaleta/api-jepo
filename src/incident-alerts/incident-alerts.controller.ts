@@ -201,6 +201,16 @@ export class IncidentAlertsController {
     return { message: 'Falso positivo registrado', data: alert };
   }
 
+  @ApiOperation({ summary: 'Registrar reporte de seguridad ("Protegido")' })
+  @Post('protegido')
+  @ApiCreatedResponse({ description: 'Reporte de seguridad enviado' })
+  async reportSafe(@Req() request: RequestWithUser) {
+    const result = await this.incidentAlertsService.reportSafe(
+      request.user.sub,
+    );
+    return { message: result.message, data: { count: result.count } };
+  }
+
   @ApiOperation({ summary: 'Obtener miembros de la familia del usuario' })
   @Get('familia')
   @ApiOkResponse({ description: 'Miembros de familia obtenidos' })

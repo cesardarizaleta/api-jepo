@@ -488,6 +488,47 @@ export class IncidentAlertsService {
     });
   }
 
+  async reportSafe(
+    idUsuarioAutenticado: number,
+  ): Promise<{ message: string; count: number }> {
+    const user = await this.findUserOrFail(idUsuarioAutenticado);
+    const userFullName = `${user.nombre} ${user.apellido}`.trim();
+
+    const contacts = await this.contactsRepository.find({
+      where: {
+        id_usuario: user.cedula,
+        estado_verificacion: EmergencyContactVerificationStatus.VERIFIED,
+      },
+    });
+
+    if (contacts.length === 0) {
+      return {
+        message: 'No tienes contactos de emergencia verificados para notificar',
+        count: 0,
+      };
+    }
+
+    const text = [
+      '🛡️ *JEPO - Reporte de Seguridad*',
+      '',
+      `✅ *${userFullName}* se encuentra bien y en buenas condiciones. ¡Todo está excelente! 👍`,
+    ].join('\n');
+
+    void this.evolutionNotificationService
+      .sendTextNotification(contacts, text)
+      .catch((err) => {
+        this.logger.error(
+          `Error enviando reportSafe para el usuario ${user.id}`,
+          err as Error,
+        );
+      });
+
+    return {
+      message: 'Reporte de seguridad enviado a tus contactos',
+      count: contacts.length,
+    };
+  }
+
   async findUserOrFail(idUsuario: number): Promise<User> {
     const user = await this.usersRepository.findOne({
       where: { id: idUsuario },

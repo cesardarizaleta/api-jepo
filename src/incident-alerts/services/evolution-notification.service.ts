@@ -81,6 +81,34 @@ export class EvolutionNotificationService {
     });
   }
 
+  async sendTextNotification(
+    contacts: EmergencyContact[],
+    message: string,
+  ): Promise<void> {
+    if (!this.evolutionService.isConfigured()) {
+      this.logger.warn(
+        'Evolution API no configurada. Se omite envio de notificaciones.',
+      );
+      return;
+    }
+
+    const tasks = contacts.map(async (contact) => {
+      try {
+        await this.evolutionService.sendText(
+          contact.telefono_contacto,
+          message,
+        );
+      } catch (err) {
+        this.logger.error(
+          `Fallo enviando texto a ${contact.telefono_contacto}`,
+          err as Error,
+        );
+      }
+    });
+
+    await Promise.allSettled(tasks);
+  }
+
   private buildAlertMessage(
     alert: IncidentAlert,
     userFullName: string,
