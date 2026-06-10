@@ -114,6 +114,10 @@ export class EvolutionService {
       return { success: false, error: 'Audio base64 vacio' };
     }
 
+    const formattedAudio = audioBase64.startsWith('data:')
+      ? audioBase64
+      : `data:audio/mp4;base64,${audioBase64}`;
+
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout for audio
@@ -128,7 +132,7 @@ export class EvolutionService {
           },
           body: JSON.stringify({
             number,
-            audio: audioBase64,
+            audio: formattedAudio,
             options: {
               delay: 1200,
               presence: 'recording',
