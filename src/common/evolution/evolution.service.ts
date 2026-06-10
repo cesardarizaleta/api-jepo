@@ -114,9 +114,13 @@ export class EvolutionService {
       return { success: false, error: 'Audio base64 vacio' };
     }
 
-    const formattedAudio = audioBase64.startsWith('data:')
-      ? audioBase64
-      : `data:audio/mp4;base64,${audioBase64}`;
+    let formattedAudio = audioBase64;
+    if (formattedAudio.startsWith('data:')) {
+      const commaIndex = formattedAudio.indexOf(',');
+      if (commaIndex !== -1) {
+        formattedAudio = formattedAudio.substring(commaIndex + 1);
+      }
+    }
 
     try {
       const controller = new AbortController();
