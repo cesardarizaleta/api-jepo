@@ -265,6 +265,13 @@ export class IncidentAlertsService {
     filtros: HistorialQueryDto,
   ): Promise<AlertHistorialResult> {
     const user = await this.findUserOrFail(idUsuarioAutenticado);
+    return this.getHistorialForUser(user, filtros);
+  }
+
+  async getHistorialForUser(
+    user: User,
+    filtros: HistorialQueryDto,
+  ): Promise<AlertHistorialResult> {
     const pagina = filtros.pagina ?? 1;
     const porPagina = filtros.porPagina ?? 20;
 
@@ -305,6 +312,10 @@ export class IncidentAlertsService {
 
   async getMetricas(idUsuarioAutenticado: number): Promise<AlertMetricsResult> {
     const user = await this.findUserOrFail(idUsuarioAutenticado);
+    return this.getMetricasForUser(user);
+  }
+
+  async getMetricasForUser(user: User): Promise<AlertMetricsResult> {
     const cedula = user.cedula;
 
     const statusRows = await this.alertsRepository
@@ -391,6 +402,77 @@ export class IncidentAlertsService {
     };
   }
 
+  async getFamilyMembers(userId: number): Promise<User[]> {
+    const user = await this.usersRepository.findOne({
+      where: { id: userId },
+      select: ['id', 'cedula', 'telefono'],
+    });
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    if (!user.telefono) {
+      return [];
+    }
+
+    return this.usersRepository
+      .createQueryBuilder('u')
+      .innerJoin(
+        EmergencyContact,
+        'ec',
+        `u.deleted_at IS NULL AND ec.deleted_at IS NULL AND ec.estado_verificacion = :status AND (
+          (ec.cedula_usuario = :cedula AND ec.telefono_contacto = u.telefono)
+          OR
+          (ec.cedula_usuario = u.cedula AND ec.telefono_contacto = :telefono)
+        )`,
+        {
+          status: EmergencyContactVerificationStatus.VERIFIED,
+          cedula: user.cedula,
+          telefono: user.telefono,
+        }
+      )
+      .select(['u.id', 'u.nombre', 'u.apellido', 'u.telefono', 'u.cedula'])
+      .where('u.id != :userId', { userId })
+      .orderBy('u.nombre', 'ASC')
+      .getMany();
+  }
+
+  async isFamilyMember(userId: number, targetUserId: number): Promise<boolean> {
+    if (userId === targetUserId) {
+      return false;
+    }
+
+    const user = await this.usersRepository.findOne({
+      where: { id: userId },
+      select: ['cedula', 'telefono'],
+    });
+    const targetUser = await this.usersRepository.findOne({
+      where: { id: targetUserId },
+      select: ['cedula', 'telefono'],
+    });
+
+    if (!user || !targetUser || !user.telefono || !targetUser.telefono) {
+      return false;
+    }
+
+    const contact = await this.contactsRepository.findOne({
+      where: [
+        {
+          id_usuario: user.cedula,
+          telefono_contacto: targetUser.telefono,
+          estado_verificacion: EmergencyContactVerificationStatus.VERIFIED,
+        },
+        {
+          id_usuario: targetUser.cedula,
+          telefono_contacto: user.telefono,
+          estado_verificacion: EmergencyContactVerificationStatus.VERIFIED,
+        },
+      ],
+    });
+
+    return !!contact;
+  }
+
   private async markAsReal(alert: IncidentAlert): Promise<IncidentAlert> {
     alert.estado = AlertStatus.REAL;
     alert.resuelta_en = new Date();
@@ -406,7 +488,7 @@ export class IncidentAlertsService {
     });
   }
 
-  private async findUserOrFail(idUsuario: number): Promise<User> {
+  async findUserOrFail(idUsuario: number): Promise<User> {
     const user = await this.usersRepository.findOne({
       where: { id: idUsuario },
     });

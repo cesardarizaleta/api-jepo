@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   Param,
   ParseIntPipe,
@@ -198,6 +199,67 @@ export class IncidentAlertsController {
       dto,
     );
     return { message: 'Falso positivo registrado', data: alert };
+  }
+
+  @ApiOperation({ summary: 'Obtener miembros de la familia del usuario' })
+  @Get('familia')
+  @ApiOkResponse({ description: 'Miembros de familia obtenidos' })
+  async getFamilyMembers(@Req() request: RequestWithUser) {
+    const members = await this.incidentAlertsService.getFamilyMembers(
+      request.user.sub,
+    );
+    return { message: 'Miembros de familia obtenidos', data: members };
+  }
+
+  @ApiOperation({ summary: 'Obtener métricas de alertas de un familiar' })
+  @ApiParam({ name: 'id', type: Number, example: 2 })
+  @Get('familia/:id/metricas')
+  @ApiOkResponse({ description: 'Métricas del familiar obtenidas' })
+  async getFamilyMemberMetricas(
+    @Req() request: RequestWithUser,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    const isFamily = await this.incidentAlertsService.isFamilyMember(
+      request.user.sub,
+      id,
+    );
+    if (!isFamily) {
+      throw new ForbiddenException(
+        'No tienes permiso para ver la información de este usuario',
+      );
+    }
+    const user = await this.incidentAlertsService.findUserOrFail(id);
+    const metricas = await this.incidentAlertsService.getMetricasForUser(user);
+    return { message: 'Métricas de familiar obtenidas', data: metricas };
+  }
+
+  @ApiOperation({ summary: 'Historial paginado de alertas de un familiar' })
+  @ApiParam({ name: 'id', type: Number, example: 2 })
+  @Get('familia/:id/historial')
+  @ApiOkResponse({ description: 'Historial de alertas de familiar obtenido' })
+  async getFamilyMemberHistorial(
+    @Req() request: RequestWithUser,
+    @Param('id', ParseIntPipe) id: number,
+    @Query() query: HistorialQueryDto,
+  ) {
+    const isFamily = await this.incidentAlertsService.isFamilyMember(
+      request.user.sub,
+      id,
+    );
+    if (!isFamily) {
+      throw new ForbiddenException(
+        'No tienes permiso para ver la información de este usuario',
+      );
+    }
+    const user = await this.incidentAlertsService.findUserOrFail(id);
+    const historial = await this.incidentAlertsService.getHistorialForUser(
+      user,
+      query,
+    );
+    return {
+      message: 'Historial de alertas de familiar obtenido',
+      data: historial,
+    };
   }
 
   @ApiOperation({ summary: 'Obtener alerta por ID' })
